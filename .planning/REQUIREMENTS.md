@@ -64,7 +64,7 @@
 - [ ] **WORK-03**: Dashboard shows progressive generation (copy first, images next, video last)
 - [ ] **WORK-04**: User can review all assets in grid view with platform-dimension preview
 - [ ] **WORK-05**: User can selectively regenerate individual assets without regenerating entire kit
-- [ ] **WORK-06**: Ringi-style approval workflow (creator → reviewer → approver)
+- [ ] **WORK-06**: Ringi-style approval workflow (creator -> reviewer -> approver)
 - [ ] **WORK-07**: System shows cost estimation before generation
 - [ ] **WORK-08**: User can download campaign kit as ZIP organized by platform
 - [ ] **WORK-09**: Pre-built brief templates for common JP campaign types (seasonal launch, flash sale, new product, brand awareness)
@@ -99,7 +99,7 @@
 
 - **WL-01**: Custom domain per tenant
 - **WL-02**: Tenant branding on generated assets
-- **WL-03**: Sub-accounts (agency → client workspaces)
+- **WL-03**: Sub-accounts (agency -> client workspaces)
 - **WL-04**: Per-tenant usage tracking and billing
 
 ### Integrations
@@ -176,10 +176,10 @@
 | BILL-03 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 42
-- Unmapped: 0 ✓
+- v1 requirements: 46 total
+- Mapped to phases: 46
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after initial definition*
+*Last updated: 2026-02-06 after roadmap creation*
