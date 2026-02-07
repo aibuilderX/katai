@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Loader2, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Loader2, CheckCircle2, AlertCircle, RefreshCw, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { useCampaignProgress } from "@/hooks/use-campaign-progress"
 import type { CampaignProgress } from "@/lib/db/schema"
 
 interface GenerationProgressProps {
@@ -14,21 +16,40 @@ interface GenerationProgressProps {
 
 /**
  * Generation progress UI component.
- * Shows step-by-step progress during campaign generation.
- * Full real-time implementation in Task 2 with useCampaignProgress hook.
+ * Subscribes to Supabase Realtime via useCampaignProgress hook for live updates.
+ * Shows step-by-step progress during campaign generation with animated progress bar.
+ *
+ * NOTE: For Realtime to deliver updates, the campaigns table needs:
+ *   ALTER TABLE campaigns REPLICA IDENTITY FULL;
+ * Without this, the fallback polling (every 5s) still works.
  */
 export function GenerationProgress({
   campaignId,
   initialProgress,
   initialStatus,
 }: GenerationProgressProps) {
-  const [progress, setProgress] = useState(initialProgress)
-  const [status, setStatus] = useState(initialStatus)
+  const router = useRouter()
+  const { progress, status, isComplete, isFailed } = useCampaignProgress(
+    campaignId,
+    initialProgress,
+    initialStatus
+  )
 
   const percentComplete = progress?.percentComplete ?? 0
   const copyStatus = progress?.copyStatus ?? "pending"
   const imageStatus = progress?.imageStatus ?? "pending"
   const currentStep = progress?.currentStep ?? "準備中..."
+
+  // Auto-refresh page when generation completes to show results
+  useEffect(() => {
+    if (isComplete) {
+      // Brief delay to show the success state before refreshing
+      const timer = setTimeout(() => {
+        router.refresh()
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [isComplete, router])
 
   function getStepIcon(stepStatus: string) {
     switch (stepStatus) {
@@ -45,7 +66,33 @@ export function GenerationProgress({
     }
   }
 
-  if (status === "failed") {
+  function getStepLabel(type: "copy" | "image", stepStatus: string) {
+    if (type === "copy") {
+      switch (stepStatus) {
+        case "complete":
+          return "コピー生成完了"
+        case "generating":
+          return "コピー生成中..."
+        case "failed":
+          return "コピー生成失敗"
+        default:
+          return "コピー生成待ち"
+      }
+    }
+    switch (stepStatus) {
+      case "complete":
+        return "画像生成完了"
+      case "generating":
+        return "画像生成中..."
+      case "failed":
+        return "画像生成失敗"
+      default:
+        return "画像生成待ち"
+    }
+  }
+
+  // Failed state
+  if (isFailed) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle bg-bg-card py-20">
         <AlertCircle className="mb-4 size-12 text-error" />
@@ -66,6 +113,24 @@ export function GenerationProgress({
     )
   }
 
+  // Complete state (brief flash before redirect)
+  if (isComplete) {
+    return (
+      <div className="mx-auto max-w-lg rounded-lg border border-border-subtle bg-bg-card p-8">
+        <div className="flex flex-col items-center text-center">
+          <Sparkles className="mb-4 size-12 text-success" />
+          <h2 className="mb-2 text-xl font-bold text-text-primary">
+            生成完了！
+          </h2>
+          <p className="text-sm text-text-muted">
+            結果を表示しています...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Generating state
   return (
     <div className="mx-auto max-w-lg rounded-lg border border-border-subtle bg-bg-card p-8">
       <div className="text-center">
@@ -102,10 +167,12 @@ export function GenerationProgress({
                 ? "font-medium text-text-primary"
                 : copyStatus === "complete"
                   ? "text-success"
-                  : "text-text-muted"
+                  : copyStatus === "failed"
+                    ? "text-error"
+                    : "text-text-muted"
             )}
           >
-            コピー生成中...
+            {getStepLabel("copy", copyStatus)}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -117,18 +184,23 @@ export function GenerationProgress({
                 ? "font-medium text-text-primary"
                 : imageStatus === "complete"
                   ? "text-success"
-                  : "text-text-muted"
+                  : imageStatus === "failed"
+                    ? "text-error"
+                    : "text-text-muted"
             )}
           >
-            画像生成中...
+            {getStepLabel("image", imageStatus)}
           </span>
         </div>
       </div>
 
-      {/* Note about real-time updates */}
-      <p className="mt-8 text-center text-xs text-text-muted">
-        ページを更新すると最新の状態を確認できます
-      </p>
+      {/* Realtime indicator */}
+      <div className="mt-8 flex items-center justify-center gap-2">
+        <div className="size-1.5 animate-pulse rounded-full bg-vermillion" />
+        <p className="text-xs text-text-muted">
+          リアルタイムで更新中
+        </p>
+      </div>
     </div>
   )
 }
