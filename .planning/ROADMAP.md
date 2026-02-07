@@ -31,12 +31,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can submit a structured campaign brief specifying brand, objective, audience, platforms, and register
   4. System generates Japanese ad copy (headlines, CTAs, body) with correct tri-script mixing and 3-5 A/B variants via Claude
   5. System generates base images via Flux matching the creative direction from the brief
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Project scaffolding, Tailwind v4 design system, Drizzle schema, Supabase clients, i18n, constants
+- [ ] 01-02-PLAN.md — Supabase Auth (email/password + Google SSO), proxy.ts, dashboard shell with sidebar, hero CTA, settings
+- [ ] 01-03-PLAN.md — Brand profile wizard (7 steps), brand CRUD API, brand list/edit pages
+- [ ] 01-04-PLAN.md — Campaign brief form, Claude copy generation, Flux image generation, n8n webhook integration
+- [ ] 01-05-PLAN.md — Campaign results UI (copy/image tabs, platform-adaptive variants, real-time progress)
 
 ### Phase 2: Japanese Text Compositing
 **Goal**: Generated images have correctly rendered Japanese text overlaid server-side with proper typography, line-breaking, and brand styling
@@ -126,7 +128,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Core Pipeline | 0/3 | Not started | - |
+| 1. Foundation & Core Pipeline | 0/5 | Planned | - |
 | 2. Japanese Text Compositing | 0/2 | Not started | - |
 | 3. Multi-Platform Formatting & Delivery | 0/3 | Not started | - |
 | 4. Video & Audio Pipeline | 0/3 | Not started | - |
@@ -135,4 +137,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*
