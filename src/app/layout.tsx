@@ -3,6 +3,7 @@ import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getMessages } from "next-intl/server"
 import { ThemeProvider } from "next-themes"
+import { Toaster } from "sonner"
 import "./globals.css"
 import { QueryProvider } from "@/lib/providers/query-provider"
 
@@ -50,6 +51,17 @@ export default async function RootLayout({
           <NextIntlClientProvider messages={messages}>
             <QueryProvider>
               {children}
+              <Toaster
+                theme="dark"
+                position="top-right"
+                toastOptions={{
+                  style: {
+                    background: "#141414",
+                    border: "1px solid #2A2A2A",
+                    color: "#FFFFFF",
+                  },
+                }}
+              />
             </QueryProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
