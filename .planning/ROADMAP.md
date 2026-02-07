@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding, Tailwind v4 design system, Drizzle schema, Supabase clients, i18n, constants
+- [x] 01-01-PLAN.md — Project scaffolding, Tailwind v4 design system, Drizzle schema, Supabase clients, i18n, constants
 - [ ] 01-02-PLAN.md — Supabase Auth (email/password + Google SSO), proxy.ts, dashboard shell with sidebar, hero CTA, settings
 - [ ] 01-03-PLAN.md — Brand profile wizard (7 steps), brand CRUD API, brand list/edit pages
 - [ ] 01-04-PLAN.md — Campaign brief form, Claude copy generation, Flux image generation, n8n webhook integration
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Core Pipeline | 0/5 | Planned | - |
+| 1. Foundation & Core Pipeline | 1/5 | In progress | - |
 | 2. Japanese Text Compositing | 0/2 | Not started | - |
 | 3. Multi-Platform Formatting & Delivery | 0/3 | Not started | - |
 | 4. Video & Audio Pipeline | 0/3 | Not started | - |
