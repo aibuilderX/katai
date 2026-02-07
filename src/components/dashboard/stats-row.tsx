@@ -24,7 +24,7 @@ export function StatsRow({
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-radius-md border border-border-subtle bg-bg-card p-5"
+          className="rounded-md border border-border-subtle bg-bg-card p-5"
         >
           <p className="text-sm font-medium text-text-secondary">
             {stat.label}

@@ -9,7 +9,7 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg-page p-4">
       <div className="w-full max-w-md">
-        <div className="rounded-radius-lg border border-border-subtle bg-bg-card p-8">
+        <div className="rounded-lg border border-border-subtle bg-bg-card p-8">
           {children}
         </div>
       </div>

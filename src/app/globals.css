@@ -38,15 +38,15 @@
   --color-error: #EF4444;
   --color-info: #6B8FA3;
 
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-2xl: 32px;
-  --spacing-3xl: 48px;
-  --spacing-4xl: 64px;
+  /* Spacing (prefixed to avoid conflicting with Tailwind built-in sm/md/lg/xl tokens) */
+  --spacing-space-xs: 4px;
+  --spacing-space-sm: 8px;
+  --spacing-space-md: 12px;
+  --spacing-space-lg: 16px;
+  --spacing-space-xl: 24px;
+  --spacing-space-2xl: 32px;
+  --spacing-space-3xl: 48px;
+  --spacing-space-4xl: 64px;
 
   /* Border radius */
   --radius-sm: 6px;

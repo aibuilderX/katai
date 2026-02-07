@@ -49,7 +49,7 @@ export function SettingsContent({
       </h1>
 
       {/* Account section */}
-      <div className="rounded-radius-lg border border-border-subtle bg-bg-card p-6">
+      <div className="rounded-lg border border-border-subtle bg-bg-card p-6">
         <h2 className="mb-4 text-lg font-bold text-text-primary">
           {t("account")}
         </h2>
@@ -84,7 +84,7 @@ export function SettingsContent({
       </div>
 
       {/* Team section */}
-      <div className="rounded-radius-lg border border-border-subtle bg-bg-card p-6">
+      <div className="rounded-lg border border-border-subtle bg-bg-card p-6">
         <h2 className="mb-4 text-lg font-bold text-text-primary">
           {t("team")}
         </h2>
@@ -104,7 +104,7 @@ export function SettingsContent({
             {members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between rounded-radius-sm bg-bg-surface px-4 py-3"
+                className="flex items-center justify-between rounded-sm bg-bg-surface px-4 py-3"
               >
                 <div>
                   <p className="text-sm font-medium text-text-primary">
@@ -114,7 +114,7 @@ export function SettingsContent({
                     <p className="text-xs text-text-muted">{member.email}</p>
                   )}
                 </div>
-                <span className="rounded-radius-pill bg-bg-hover px-3 py-1 text-xs font-medium text-text-muted">
+                <span className="rounded-pill bg-bg-hover px-3 py-1 text-xs font-medium text-text-muted">
                   {member.role === "admin"
                     ? t("admin")
                     : member.role === "editor"
@@ -131,7 +131,7 @@ export function SettingsContent({
       </div>
 
       {/* Logout */}
-      <div className="rounded-radius-lg border border-border-subtle bg-bg-card p-6">
+      <div className="rounded-lg border border-border-subtle bg-bg-card p-6">
         <Button
           onClick={handleLogout}
           variant="destructive"

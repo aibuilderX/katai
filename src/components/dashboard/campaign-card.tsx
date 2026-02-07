@@ -49,7 +49,7 @@ export function CampaignCard({
   return (
     <Link
       href={`/campaigns/${id}`}
-      className="group block overflow-hidden rounded-radius-lg border border-border-subtle bg-bg-card transition-all duration-200 ease-out hover:-translate-y-2 hover:border-border hover:shadow-lg"
+      className="group block overflow-hidden rounded-lg border border-border-subtle bg-bg-card transition-all duration-200 ease-out hover:-translate-y-2 hover:border-border hover:shadow-lg"
     >
       {/* Thumbnail area (16:9 aspect ratio) */}
       <div className="relative aspect-video w-full overflow-hidden bg-bg-surface">
@@ -84,7 +84,7 @@ export function CampaignCard({
         <div className="absolute right-3 top-3">
           <span
             className={cn(
-              "inline-flex items-center rounded-radius-pill px-3 py-1 text-xs font-medium",
+              "inline-flex items-center rounded-pill px-3 py-1 text-xs font-medium",
               statusInfo.className
             )}
           >
@@ -101,7 +101,7 @@ export function CampaignCard({
         <div className="mt-2 flex items-center gap-3">
           <span className="text-xs text-text-muted">{formattedDate}</span>
           {platformCount > 0 && (
-            <span className="inline-flex items-center rounded-radius-pill bg-warm-gold-subtle px-2 py-0.5 text-xs font-medium text-warm-gold">
+            <span className="inline-flex items-center rounded-pill bg-warm-gold-subtle px-2 py-0.5 text-xs font-medium text-warm-gold">
               {platformCount} プラットフォーム
             </span>
           )}

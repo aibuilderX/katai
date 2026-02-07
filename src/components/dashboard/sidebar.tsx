@@ -59,7 +59,7 @@ export function Sidebar({
       {/* Logo / Brand */}
       <div className="flex h-16 items-center border-b border-border-subtle px-4">
         <Link href="/" className="flex items-center gap-3 overflow-hidden">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-radius-sm bg-vermillion text-sm font-black text-text-inverse">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-vermillion text-sm font-black text-text-inverse">
             AI
           </div>
           {!sidebarCollapsed && (
@@ -81,7 +81,7 @@ export function Sidebar({
               key={item.key}
               href={item.href}
               className={cn(
-                "group relative flex h-12 items-center gap-3 rounded-radius-sm px-3 text-sm font-medium transition-colors duration-200",
+                "group relative flex h-12 items-center gap-3 rounded-sm px-3 text-sm font-medium transition-colors duration-200",
                 active
                   ? "bg-vermillion-subtle text-text-primary"
                   : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
@@ -104,7 +104,7 @@ export function Sidebar({
       <div className="border-t border-border-subtle p-3">
         <div
           className={cn(
-            "flex items-center gap-3 rounded-radius-sm px-3 py-2",
+            "flex items-center gap-3 rounded-sm px-3 py-2",
             sidebarCollapsed ? "justify-center px-0" : ""
           )}
         >
@@ -138,7 +138,7 @@ export function Sidebar({
       <div className="border-t border-border-subtle p-3">
         <button
           onClick={toggleSidebar}
-          className="flex h-8 w-full items-center justify-center rounded-radius-sm text-text-muted transition-colors hover:bg-bg-hover hover:text-text-secondary"
+          className="flex h-8 w-full items-center justify-center rounded-sm text-text-muted transition-colors hover:bg-bg-hover hover:text-text-secondary"
           aria-label={sidebarCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
         >
           {sidebarCollapsed ? (

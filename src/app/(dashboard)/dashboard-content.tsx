@@ -38,7 +38,7 @@ export function DashboardContent({
     <div className="mx-auto max-w-6xl space-y-8">
       {/* Onboarding banner for first-time users */}
       {!hasBrands && (
-        <div className="rounded-radius-lg border border-warm-gold/20 bg-warm-gold-subtle p-6">
+        <div className="rounded-lg border border-warm-gold/20 bg-warm-gold-subtle p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-text-primary">
@@ -71,7 +71,7 @@ export function DashboardContent({
         </p>
         <Button
           asChild
-          className="mt-8 h-14 rounded-radius-md bg-vermillion px-10 text-lg font-bold text-text-inverse hover:bg-vermillion-hover transition-colors duration-200"
+          className="mt-8 h-14 rounded-md bg-vermillion px-10 text-lg font-bold text-text-inverse hover:bg-vermillion-hover transition-colors duration-200"
         >
           <Link href="/campaigns/new">
             <Plus className="size-5" />
@@ -108,7 +108,7 @@ export function DashboardContent({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-radius-lg border border-border-subtle bg-bg-card py-16">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-border-subtle bg-bg-card py-16">
             <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-bg-surface">
               <Megaphone className="size-8 text-text-muted" />
             </div>
