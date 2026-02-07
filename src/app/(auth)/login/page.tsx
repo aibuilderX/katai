@@ -60,10 +60,10 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleEmailLogin} className="space-y-4">
-        <div className="space-y-2">
+        <div>
           <label
             htmlFor="email"
-            className="text-sm font-medium text-text-primary"
+            className="mb-2.5 block text-sm font-medium text-text-primary"
           >
             メールアドレス
           </label>
@@ -79,10 +79,10 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div>
           <label
             htmlFor="password"
-            className="text-sm font-medium text-text-primary"
+            className="mb-2.5 block text-sm font-medium text-text-primary"
           >
             パスワード
           </label>
