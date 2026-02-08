@@ -67,12 +67,13 @@ Plans:
   3. User can review all generated assets in a grid view with platform-dimension previews
   4. User can download the complete campaign kit as a ZIP organized by platform
   5. Full pipeline executes end-to-end from brief submission through n8n orchestration to delivered kit
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — Platform copy constraints registry and platform-aware Claude copy generation
+- [ ] 03-02-PLAN.md — Multi-platform image resize pipeline and HTML email template generator
+- [ ] 03-03-PLAN.md — Pipeline integration (platform copy + resize + email + ZIP packager)
+- [ ] 03-04-PLAN.md — Platform grid view UI and download button
 
 ### Phase 4: Video & Audio Pipeline
 **Goal**: Campaign kits include video ads, Japanese voiceover, AI avatar presenters, and cinematic video across multiple aspect ratios
@@ -132,7 +133,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Foundation & Core Pipeline | 5/5 | Complete | 2026-02-07 |
 | 2. Japanese Text Compositing | 4/4 | Complete | 2026-02-08 |
-| 3. Multi-Platform Formatting & Delivery | 0/3 | Not started | - |
+| 3. Multi-Platform Formatting & Delivery | 0/4 | Not started | - |
 | 4. Video & Audio Pipeline | 0/3 | Not started | - |
 | 5. Workflow & Intelligence | 0/3 | Not started | - |
 | 6. Billing & Compliance | 0/2 | Not started | - |
