@@ -49,7 +49,7 @@ export const VIDEO_PROVIDERS: Record<string, VideoProvider> = {
     name: "Runway Gen-4",
     costPerSecond: 0.05,
     maxDuration: 10,
-    supportedAspectRatios: ["1920:1080", "1080:1920", "960:960"],
+    supportedAspectRatios: ["1280:720", "720:1280", "960:960"],
     authType: "sdk",
   },
   elevenlabs: {
