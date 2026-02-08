@@ -49,11 +49,13 @@ Plans:
   2. Text overlay follows kinsoku shori line-break rules (no prohibited characters at line start/end)
   3. User's keigo register selection is maintained consistently across all generated copy
   4. Brand kit colors, logo, and font preferences are applied to composited images
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Types, kinsoku character sets, BudouX line-breaking engine (TDD)
+- [ ] 02-02-PLAN.md — Contrast analyzer, text renderer (horizontal/vertical), logo placer
+- [ ] 02-03-PLAN.md — Claude Vision layout engine for AI-driven text placement
+- [ ] 02-04-PLAN.md — Compositing pipeline orchestrator, storage, pipeline integration, UI updates
 
 ### Phase 3: Multi-Platform Formatting & Delivery
 **Goal**: A single brief produces a complete, downloadable campaign kit with correctly sized and validated assets for all 7 target platforms
@@ -129,7 +131,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Core Pipeline | 5/5 | Complete | 2026-02-07 |
-| 2. Japanese Text Compositing | 0/2 | Not started | - |
+| 2. Japanese Text Compositing | 0/4 | Not started | - |
 | 3. Multi-Platform Formatting & Delivery | 0/3 | Not started | - |
 | 4. Video & Audio Pipeline | 0/3 | Not started | - |
 | 5. Workflow & Intelligence | 0/3 | Not started | - |
@@ -137,4 +139,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*
