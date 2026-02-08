@@ -41,6 +41,8 @@ export interface CampaignProgress {
   copyStatus: "pending" | "generating" | "complete" | "failed"
   imageStatus: "pending" | "generating" | "complete" | "failed"
   compositingStatus?: "pending" | "generating" | "complete" | "failed"
+  platformResizeStatus?: "pending" | "generating" | "complete" | "failed"
+  emailStatus?: "pending" | "generating" | "complete" | "failed"
   percentComplete: number
   currentStep: string
 }
