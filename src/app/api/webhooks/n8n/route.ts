@@ -10,6 +10,9 @@
  *   status: "success" | "failure"
  *   copyVariants?: CopyVariantPayload[]
  *   imageUrls?: string[]
+ *   videoAssets?: VideoAssetPayload[]
+ *   audioAssets?: AudioAssetPayload[]
+ *   stage?: "copy" | "image" | "voiceover" | "video" | "avatar" | "complete"
  *   error?: string
  * }
  */
@@ -18,7 +21,9 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { db } from "@/lib/db"
 import { campaigns, copyVariants, assets, brandProfiles } from "@/lib/db/schema"
+import type { CampaignProgress } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
+import { adminClient } from "@/lib/supabase/admin"
 
 interface CopyVariantPayload {
   platform: string
@@ -30,12 +35,64 @@ interface CopyVariantPayload {
   hashtags: string[]
 }
 
+interface VideoAssetPayload {
+  url: string
+  provider: "kling" | "runway" | "heygen"
+  aspectRatio: string
+  duration: number
+  type: "ad" | "cinematic" | "avatar"
+  mimeType: string
+}
+
+interface AudioAssetPayload {
+  url: string
+  provider: "elevenlabs"
+  duration: number
+  mimeType: string
+  voiceId: string
+}
+
 interface N8nWebhookPayload {
   campaignId: string
   status: "success" | "failure"
   copyVariants?: CopyVariantPayload[]
   imageUrls?: string[]
+  videoAssets?: VideoAssetPayload[]
+  audioAssets?: AudioAssetPayload[]
+  stage?: "copy" | "image" | "voiceover" | "video" | "avatar" | "complete"
   error?: string
+}
+
+/**
+ * Download a file from a provider URL to Supabase Storage.
+ *
+ * Provider-generated URLs are temporary and expire (24-48 hours).
+ * This function downloads immediately and uploads to persistent storage.
+ *
+ * @returns The storage path (not the full URL)
+ */
+async function downloadToStorage(
+  url: string,
+  bucket: string,
+  path: string,
+  mimeType: string
+): Promise<string> {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to download from provider: HTTP ${response.status}`)
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer())
+
+  const { error } = await adminClient.storage
+    .from(bucket)
+    .upload(path, buffer, { contentType: mimeType, upsert: true })
+
+  if (error) {
+    throw new Error(`Supabase Storage upload failed: ${error.message}`)
+  }
+
+  return path
 }
 
 /**
@@ -266,20 +323,153 @@ export async function POST(request: Request) {
       }
     }
 
+    // Process video assets -- download provider URLs to Supabase Storage
+    if (payload.videoAssets && payload.videoAssets.length > 0) {
+      // Update progress for video stage (merge pattern to avoid race conditions)
+      const currentProgress = await db
+        .select({ progress: campaigns.progress })
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId))
+        .limit(1)
+      const existingProgress = (currentProgress[0]?.progress ?? {}) as Partial<CampaignProgress>
+
+      await db
+        .update(campaigns)
+        .set({
+          progress: {
+            ...existingProgress,
+            stage: "video",
+            videoStatus: "generating",
+            currentStep: "動画アセット保存中...",
+          } as CampaignProgress,
+        })
+        .where(eq(campaigns.id, campaignId))
+
+      for (const videoAsset of payload.videoAssets) {
+        try {
+          const storagePath = `campaigns/${campaignId}/videos/${videoAsset.provider}-${videoAsset.aspectRatio.replace(":", "x")}-${Date.now()}.mp4`
+          const storageKey = await downloadToStorage(
+            videoAsset.url,
+            "campaign-videos",
+            storagePath,
+            videoAsset.mimeType || "video/mp4"
+          )
+
+          // Derive width/height from aspect ratio
+          const [w, h] = videoAsset.aspectRatio.split(":").map(Number)
+          const baseSize = 1080
+          const width = w > h ? baseSize : Math.round(baseSize * (w / h))
+          const height = h > w ? baseSize : Math.round(baseSize * (h / w))
+
+          await db.insert(assets).values({
+            campaignId,
+            type: "video",
+            storageKey,
+            fileName: `${videoAsset.type}-${videoAsset.aspectRatio.replace(":", "x")}.mp4`,
+            width: String(width),
+            height: String(height),
+            mimeType: videoAsset.mimeType || "video/mp4",
+            modelUsed: videoAsset.provider,
+            metadata: {
+              provider: videoAsset.provider,
+              aspectRatio: videoAsset.aspectRatio,
+              duration: videoAsset.duration,
+              videoType: videoAsset.type,
+            },
+          })
+        } catch (videoError) {
+          console.error(
+            `[n8n-webhook] Failed to persist video asset from ${videoAsset.provider}:`,
+            videoError
+          )
+          // Non-fatal: continue with other assets
+        }
+      }
+    }
+
+    // Process audio assets -- download provider URLs to Supabase Storage
+    if (payload.audioAssets && payload.audioAssets.length > 0) {
+      for (const audioAsset of payload.audioAssets) {
+        try {
+          const storagePath = `campaigns/${campaignId}/audio/${audioAsset.provider}-${Date.now()}.mp3`
+          const storageKey = await downloadToStorage(
+            audioAsset.url,
+            "campaign-audio",
+            storagePath,
+            audioAsset.mimeType || "audio/mpeg"
+          )
+
+          await db.insert(assets).values({
+            campaignId,
+            type: "audio",
+            storageKey,
+            fileName: `voiceover-${audioAsset.provider}.mp3`,
+            mimeType: "audio/mpeg",
+            modelUsed: audioAsset.provider,
+            metadata: {
+              provider: audioAsset.provider,
+              duration: audioAsset.duration,
+              voiceId: audioAsset.voiceId,
+            },
+          })
+        } catch (audioError) {
+          console.error(
+            `[n8n-webhook] Failed to persist audio asset from ${audioAsset.provider}:`,
+            audioError
+          )
+          // Non-fatal: continue with other assets
+        }
+      }
+    }
+
+    // Stage-specific progress merge (avoids full replacement race condition)
+    if (payload.stage && payload.stage !== "complete") {
+      const currentProg = await db
+        .select({ progress: campaigns.progress })
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId))
+        .limit(1)
+      const existing = (currentProg[0]?.progress ?? {}) as Partial<CampaignProgress>
+
+      const stageUpdate: Partial<CampaignProgress> = {}
+      if (payload.stage === "voiceover") stageUpdate.voiceoverStatus = "complete"
+      if (payload.stage === "video") stageUpdate.videoStatus = "complete"
+      if (payload.stage === "avatar") stageUpdate.avatarStatus = "complete"
+
+      await db
+        .update(campaigns)
+        .set({
+          progress: { ...existing, ...stageUpdate } as CampaignProgress,
+        })
+        .where(eq(campaigns.id, campaignId))
+    }
+
     // Update campaign status to complete
+    // Build final progress including video/audio statuses
+    const finalProgress = await db
+      .select({ progress: campaigns.progress })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1)
+    const prevProgress = (finalProgress[0]?.progress ?? {}) as Partial<CampaignProgress>
+
     await db
       .update(campaigns)
       .set({
         status: "complete",
         completedAt: new Date(),
         progress: {
+          ...prevProgress,
           stage: "complete",
           copyStatus: "complete",
           imageStatus: "complete",
-          compositingStatus: "complete",
+          compositingStatus: prevProgress.compositingStatus ?? "complete",
+          voiceoverStatus: prevProgress.voiceoverStatus ?? (payload.audioAssets?.length ? "complete" : undefined),
+          videoStatus: prevProgress.videoStatus ?? (payload.videoAssets?.length ? "complete" : undefined),
+          avatarStatus: prevProgress.avatarStatus,
           percentComplete: 100,
           currentStep: "生成完了",
-        },
+        } as CampaignProgress,
       })
       .where(eq(campaigns.id, campaignId))
   } catch (dbError) {

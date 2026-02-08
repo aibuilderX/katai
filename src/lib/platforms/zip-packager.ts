@@ -6,6 +6,8 @@
  * - Per-platform copy text files with all 4 variants
  * - Email HTML template (if present)
  * - Composited images in a composited/ folder
+ * - Video files in a videos/ folder (organized by aspect ratio)
+ * - Audio files in an audio/ folder
  *
  * Uses streaming via PassThrough so the response can start before
  * the entire archive is built in memory.
@@ -17,6 +19,7 @@ import { db } from "@/lib/db"
 import { assets, copyVariants } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { PLATFORMS } from "@/lib/constants/platforms"
+import { adminClient } from "@/lib/supabase/admin"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +42,8 @@ interface CampaignZipResult {
  *   {platformId}/{image-file}.png
  *   email/template.html
  *   composited/{image-file}.png
+ *   videos/{aspectRatio}/{video-file}.mp4
+ *   audio/{audio-file}.mp3
  *
  * Individual asset fetch failures are logged and skipped -- the archive
  * still contains whatever assets could be fetched successfully.
@@ -57,6 +62,8 @@ export async function buildCampaignZip(
     (a) => a.type === "composited_image"
   )
   const emailHtmlAssets = allAssets.filter((a) => a.type === "email_html")
+  const videoAssets = allAssets.filter((a) => a.type === "video")
+  const audioAssets = allAssets.filter((a) => a.type === "audio")
 
   // Fetch all copy variants
   const allCopyVariants = await db
@@ -171,6 +178,45 @@ export async function buildCampaignZip(
     archive.append(buffer, { name: `composited/${fileName}` })
   }
 
+  // -------------------------------------------------------------------------
+  // Add video files (organized by aspect ratio)
+  // -------------------------------------------------------------------------
+  if (videoAssets.length > 0) {
+    const videoBuffers = await fetchStorageBuffersBatched(
+      videoAssets.map((a) => ({ storageKey: a.storageKey, id: a.id, bucket: "campaign-videos" })),
+      3
+    )
+
+    for (const asset of videoAssets) {
+      const buffer = videoBuffers.get(asset.id)
+      if (!buffer) continue
+
+      const meta = asset.metadata as Record<string, unknown> | null
+      const aspectRatio = (meta?.aspectRatio as string)?.replace(":", "x") || "unknown"
+      const fileName = asset.fileName || `${asset.id}.mp4`
+
+      archive.append(buffer, { name: `videos/${aspectRatio}/${fileName}` })
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Add audio files
+  // -------------------------------------------------------------------------
+  if (audioAssets.length > 0) {
+    const audioBuffers = await fetchStorageBuffersBatched(
+      audioAssets.map((a) => ({ storageKey: a.storageKey, id: a.id, bucket: "campaign-audio" })),
+      3
+    )
+
+    for (const asset of audioAssets) {
+      const buffer = audioBuffers.get(asset.id)
+      if (!buffer) continue
+
+      const fileName = asset.fileName || `${asset.id}.mp3`
+      archive.append(buffer, { name: `audio/${fileName}` })
+    }
+  }
+
   // Finalize -- this triggers the stream to flush and end
   archive.finalize()
 
@@ -184,6 +230,53 @@ export async function buildCampaignZip(
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Fetch multiple files from Supabase Storage in parallel batches.
+ * Uses the admin client to download from private/public buckets.
+ * Failed downloads are logged and skipped.
+ */
+async function fetchStorageBuffersBatched(
+  items: Array<{ storageKey: string; id: string; bucket: string }>,
+  batchSize: number
+): Promise<Map<string, Buffer>> {
+  const results = new Map<string, Buffer>()
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize)
+    const settled = await Promise.allSettled(
+      batch.map(async (item) => {
+        const { data, error } = await adminClient.storage
+          .from(item.bucket)
+          .download(item.storageKey)
+
+        if (error || !data) {
+          throw new Error(
+            `Storage download failed for ${item.storageKey}: ${error?.message ?? "no data"}`
+          )
+        }
+
+        const buffer = Buffer.from(await data.arrayBuffer())
+        return { id: item.id, buffer }
+      })
+    )
+
+    for (const result of settled) {
+      if (result.status === "fulfilled") {
+        results.set(result.value.id, result.value.buffer)
+      } else {
+        console.warn(
+          "[zip-packager] Storage asset fetch failed, skipping:",
+          result.reason instanceof Error
+            ? result.reason.message
+            : result.reason
+        )
+      }
+    }
+  }
+
+  return results
+}
 
 /**
  * Fetch multiple URLs in parallel, batched to avoid overwhelming the server.

@@ -716,12 +716,220 @@ async function runDirectGeneration(
     }
 
     // -----------------------------------------------------------------------
+    // Stage 6: Video/Audio pipeline (if video-capable platforms selected)
+    // -----------------------------------------------------------------------
+    let videoSucceeded = false
+    let voiceoverStatus: "complete" | "failed" | "skipped" | undefined
+    let videoStatus: "complete" | "failed" | "skipped" | undefined
+    let avatarStatus: "complete" | "failed" | "skipped" | undefined
+
+    // Check if any selected platform has video aspect ratios
+    const { PLATFORM_ASPECT_RATIOS } = await import(
+      "@/lib/constants/video-providers"
+    )
+    const hasVideoPlatforms = brief.platforms.some(
+      (p: string) => PLATFORM_ASPECT_RATIOS[p]
+    )
+
+    if (hasVideoPlatforms) {
+      try {
+        // Fetch first copy variant (A案) for voiceover script
+        const firstVariantForVideo = await db
+          .select()
+          .from(copyVariants)
+          .where(
+            and(
+              eq(copyVariants.campaignId, campaignId),
+              eq(copyVariants.variantLabel, "A案")
+            )
+          )
+          .limit(1)
+
+        // Gather composited images for video input
+        const compositedAssets = await db
+          .select()
+          .from(assets)
+          .where(
+            and(
+              eq(assets.campaignId, campaignId),
+              eq(assets.type, "composited_image")
+            )
+          )
+
+        const compositedImageUrls = compositedAssets.length > 0
+          ? compositedAssets.map((a) => a.storageKey)
+          : insertedAssets.map((a) => a.storageKey)
+
+        const copyText = firstVariantForVideo.length > 0
+          ? `${firstVariantForVideo[0].headline} ${firstVariantForVideo[0].bodyText}`
+          : brief.objective
+
+        const { runVideoPipeline } = await import("@/lib/ai/video-pipeline")
+        const { adminClient: adminSupa } = await import("@/lib/supabase/admin")
+
+        const videoResult = await runVideoPipeline({
+          campaignId,
+          brief: brief as import("@/types/campaign").CampaignBrief,
+          copyText,
+          compositedImageUrls,
+          platforms: brief.platforms,
+          updateProgress: async (update) => {
+            const current = await db
+              .select({ progress: campaigns.progress })
+              .from(campaigns)
+              .where(eq(campaigns.id, campaignId))
+              .limit(1)
+            const existing = (current[0]?.progress ?? {}) as Record<string, unknown>
+            await db
+              .update(campaigns)
+              .set({
+                progress: { ...existing, ...update } as import("@/lib/db/schema").CampaignProgress,
+              })
+              .where(eq(campaigns.id, campaignId))
+          },
+        })
+
+        // Download video URLs to Supabase Storage and create asset records
+        for (const video of videoResult.videos) {
+          try {
+            const storagePath = `campaigns/${campaignId}/videos/${video.provider}-${video.aspectRatio.replace(":", "x")}-${Date.now()}.mp4`
+
+            const response = await fetch(video.url)
+            if (!response.ok) {
+              console.warn(`[video-pipeline] Failed to download video: HTTP ${response.status}`)
+              continue
+            }
+            const buffer = Buffer.from(await response.arrayBuffer())
+
+            const { error: uploadError } = await adminSupa.storage
+              .from("campaign-videos")
+              .upload(storagePath, buffer, {
+                contentType: "video/mp4",
+                upsert: true,
+              })
+
+            if (uploadError) {
+              console.warn(`[video-pipeline] Upload failed: ${uploadError.message}`)
+              continue
+            }
+
+            const [w, h] = video.aspectRatio.split(":").map(Number)
+            const baseSize = 1080
+            const width = w > h ? baseSize : Math.round(baseSize * (w / h))
+            const height = h > w ? baseSize : Math.round(baseSize * (h / w))
+
+            await db.insert(assets).values({
+              campaignId,
+              type: "video",
+              storageKey: storagePath,
+              fileName: `${video.type}-${video.aspectRatio.replace(":", "x")}.mp4`,
+              width: String(width),
+              height: String(height),
+              mimeType: "video/mp4",
+              modelUsed: video.provider,
+              metadata: {
+                provider: video.provider,
+                aspectRatio: video.aspectRatio,
+                duration: video.duration,
+                videoType: video.type,
+              },
+            })
+          } catch (videoAssetError) {
+            console.error("[video-pipeline] Failed to persist video asset:", videoAssetError)
+          }
+        }
+
+        // Upload voiceover buffer to Supabase Storage
+        if (videoResult.voiceover) {
+          try {
+            const audioPath = `campaigns/${campaignId}/audio/voiceover-${Date.now()}.mp3`
+            const { error: audioUploadError } = await adminSupa.storage
+              .from("campaign-audio")
+              .upload(audioPath, videoResult.voiceover.buffer, {
+                contentType: "audio/mpeg",
+                upsert: true,
+              })
+
+            if (!audioUploadError) {
+              await db.insert(assets).values({
+                campaignId,
+                type: "audio",
+                storageKey: audioPath,
+                fileName: "voiceover.mp3",
+                mimeType: "audio/mpeg",
+                modelUsed: "elevenlabs",
+                metadata: {
+                  provider: "elevenlabs",
+                  duration: videoResult.voiceover.durationEstimate,
+                },
+              })
+            } else {
+              console.warn("[video-pipeline] Audio upload failed:", audioUploadError.message)
+            }
+          } catch (audioError) {
+            console.error("[video-pipeline] Failed to persist audio:", audioError)
+          }
+        }
+
+        // Handle avatar video
+        if (videoResult.avatarVideo) {
+          try {
+            const avatarPath = `campaigns/${campaignId}/videos/avatar-${Date.now()}.mp4`
+            const avatarResp = await fetch(videoResult.avatarVideo.url)
+            if (avatarResp.ok) {
+              const avatarBuf = Buffer.from(await avatarResp.arrayBuffer())
+              const { error: avatarUploadError } = await adminSupa.storage
+                .from("campaign-videos")
+                .upload(avatarPath, avatarBuf, {
+                  contentType: "video/mp4",
+                  upsert: true,
+                })
+
+              if (!avatarUploadError) {
+                await db.insert(assets).values({
+                  campaignId,
+                  type: "video",
+                  storageKey: avatarPath,
+                  fileName: "avatar-9x16.mp4",
+                  width: "1080",
+                  height: "1920",
+                  mimeType: "video/mp4",
+                  modelUsed: videoResult.avatarVideo.provider,
+                  metadata: {
+                    provider: videoResult.avatarVideo.provider,
+                    aspectRatio: "9:16",
+                    duration: videoResult.avatarVideo.duration,
+                    videoType: "avatar",
+                  },
+                })
+              }
+            }
+          } catch (avatarError) {
+            console.error("[video-pipeline] Failed to persist avatar video:", avatarError)
+          }
+        }
+
+        videoSucceeded = videoResult.videos.length > 0
+        voiceoverStatus = videoResult.voiceover ? "complete" : "failed"
+        videoStatus = videoResult.videos.length > 0 ? "complete" : "failed"
+        avatarStatus = videoResult.avatarVideo ? "complete" : !videoResult.voiceover ? "skipped" : "failed"
+      } catch (videoError) {
+        console.error("Video pipeline failed:", videoError)
+        voiceoverStatus = "failed"
+        videoStatus = "failed"
+        avatarStatus = "failed"
+        // Non-fatal: campaign completes with images
+      }
+    }
+
+    // -----------------------------------------------------------------------
     // Final: Mark campaign as complete
     // -----------------------------------------------------------------------
     const failedStages: string[] = []
     if (!compositingSucceeded) failedStages.push("テキスト合成")
     if (!platformResizeSucceeded) failedStages.push("リサイズ")
     if (hasEmail && !emailSucceeded) failedStages.push("メール")
+    if (hasVideoPlatforms && !videoSucceeded) failedStages.push("動画")
 
     const currentStep =
       failedStages.length > 0
@@ -746,6 +954,9 @@ async function runDirectGeneration(
               ? "complete"
               : "failed"
             : undefined,
+          voiceoverStatus: hasVideoPlatforms ? voiceoverStatus : undefined,
+          videoStatus: hasVideoPlatforms ? videoStatus : undefined,
+          avatarStatus: hasVideoPlatforms ? avatarStatus : undefined,
           percentComplete: 100,
           currentStep,
         },
