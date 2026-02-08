@@ -90,9 +90,33 @@ export function breakJapaneseText(
   const lines = assembleLinesFromPhrases(phrases, maxWidthPx, fontSize)
 
   // Step 3: Apply kinsoku post-processing (max 3 iterations)
-  const corrected = resolveKinsoku(lines, maxWidthPx, fontSize)
+  const corrected = resolveKinsoku(lines)
 
   return { lines: corrected, orientation }
+}
+
+/**
+ * Split a string character-by-character into the lines/currentLine accumulator,
+ * respecting maxWidthPx per line. Returns the updated currentLine.
+ */
+function splitCharsIntoLines(
+  text: string,
+  currentLine: string,
+  lines: string[],
+  maxWidthPx: number,
+  fontSize: number
+): string {
+  for (const char of text) {
+    if (currentLine.length === 0) {
+      currentLine = char
+    } else if (estimateTextWidth(currentLine + char, fontSize) <= maxWidthPx) {
+      currentLine += char
+    } else {
+      lines.push(currentLine)
+      currentLine = char
+    }
+  }
+  return currentLine
 }
 
 /**
@@ -115,40 +139,13 @@ function assembleLinesFromPhrases(
       currentLine += phrase
     } else if (currentLine.length === 0) {
       // Phrase is too long for a single line -- split character by character
-      const chars = [...phrase]
-      for (const char of chars) {
-        const lineWithChar = currentLine + char
-        if (estimateTextWidth(lineWithChar, fontSize) <= maxWidthPx && currentLine.length > 0) {
-          currentLine += char
-        } else if (currentLine.length === 0) {
-          // First character of a new line always goes on
-          currentLine = char
-        } else if (estimateTextWidth(lineWithChar, fontSize) <= maxWidthPx) {
-          currentLine += char
-        } else {
-          lines.push(currentLine)
-          currentLine = char
-        }
-      }
+      currentLine = splitCharsIntoLines(phrase, currentLine, lines, maxWidthPx, fontSize)
     } else {
       // Start a new line with this phrase
       lines.push(currentLine)
-      // Check if the phrase itself is too long
       if (estimateTextWidth(phrase, fontSize) > maxWidthPx) {
-        // Split the phrase character by character
-        currentLine = ""
-        const chars = [...phrase]
-        for (const char of chars) {
-          const lineWithChar = currentLine + char
-          if (currentLine.length === 0) {
-            currentLine = char
-          } else if (estimateTextWidth(lineWithChar, fontSize) <= maxWidthPx) {
-            currentLine += char
-          } else {
-            lines.push(currentLine)
-            currentLine = char
-          }
-        }
+        // Phrase too long -- split character by character
+        currentLine = splitCharsIntoLines(phrase, "", lines, maxWidthPx, fontSize)
       } else {
         currentLine = phrase
       }
@@ -171,11 +168,7 @@ function assembleLinesFromPhrases(
  *
  * Max 3 iterations to prevent infinite cascades.
  */
-function resolveKinsoku(
-  lines: string[],
-  _maxWidthPx: number,
-  _fontSize: number
-): string[] {
+function resolveKinsoku(lines: string[]): string[] {
   if (lines.length <= 1) return lines
 
   let result = [...lines]
