@@ -88,7 +88,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Provider client modules (Runway, ElevenLabs, Kling, HeyGen), type extensions, constants, provider health tracker
+- [x] 04-01-PLAN.md — Provider client modules (Runway, ElevenLabs, Kling, HeyGen), type extensions, constants, provider health tracker
 - [ ] 04-02-PLAN.md — Pipeline orchestration, webhook handler extension, Supabase Storage download, ZIP packager update
 - [ ] 04-03-PLAN.md — Progressive generation UI for video/audio stages, video player, video gallery tab
 
@@ -134,7 +134,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Foundation & Core Pipeline | 5/5 | Complete | 2026-02-07 |
 | 2. Japanese Text Compositing | 4/4 | Complete | 2026-02-08 |
 | 3. Multi-Platform Formatting & Delivery | 4/4 | Complete | 2026-02-08 |
-| 4. Video & Audio Pipeline | 0/3 | Not started | - |
+| 4. Video & Audio Pipeline | 1/3 | In progress | - |
 | 5. Workflow & Intelligence | 0/3 | Not started | - |
 | 6. Billing & Compliance | 0/2 | Not started | - |
 

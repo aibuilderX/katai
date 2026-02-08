@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 3 complete. Ready for Phase 4.
+**Current focus:** Phase 4 in progress. Provider client modules complete.
 
 ## Current Position
 
-Phase: 3 of 6 (Multi-Platform Formatting & Delivery)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 03-04-PLAN.md
+Phase: 4 of 6 (Video & Audio Pipeline)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-09 -- Completed 04-01-PLAN.md
 
-Progress: [████████████████████] 100% (Phase 3: 4/4 plans)
+Progress: [█████████████████░░░] 85% (Phase 4: 1/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: ~9 min
-- Total execution time: ~129 min
+- Total execution time: ~135 min
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████████████████████] 100% (P
 | 1 | 5/5 | ~69 min | ~14 min |
 | 2 | 4/4 | ~18 min | ~5 min |
 | 3 | 4/4 | ~42 min | ~11 min |
+| 4 | 1/3 | ~6 min | ~6 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01, 03-02, 03-01(copy), 03-03, 03-04
-- Note: 03-04 completed in 3min (UI components only, no backend)
+- Last 5 plans: 03-02, 03-01(copy), 03-03, 03-04, 04-01
+- Note: 04-01 completed in 6min (SDK install + 4 client modules + constants)
 
 *Updated after each plan completion*
 
@@ -84,12 +85,17 @@ Recent decisions affecting current work:
 - [03-04]: DownloadButton in sidebar, visible only for complete/partial campaigns
 - [03-04]: Extreme aspect ratio threshold >3x or <1/3x for "要調整" warning badge
 - [03-04]: Copy sections in platform grid collapsed by default (accordion pattern)
+- [04-01]: Runway Gen-4 Turbo aspect ratios corrected to SDK-valid values (1280:720 not 1920:1080)
+- [04-01]: Kling accessed via fal.ai proxy for simpler API key auth (no JWT token management)
+- [04-01]: ElevenLabs language text normalization omitted by default (latency concern)
+- [04-01]: Provider health tracker is in-memory only (resets on server restart, acceptable for MVP)
 
 ### Pending Todos
 
 - Run `ALTER TABLE campaigns REPLICA IDENTITY FULL;` for optimal Supabase Realtime (optional, polling works without it)
 - Create `composited-images` bucket in Supabase Storage (public: true) for composited image uploads
 - Create `platform-images` bucket in Supabase Storage (public: true) for platform-resized images
+- Complete 04-USER-SETUP.md: configure Runway, ElevenLabs, fal.ai, HeyGen API keys and voice/avatar selections
 
 ### Blockers/Concerns
 
@@ -97,6 +103,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Phase 3 complete (all 4 plans). Next: Phase 4 planning/research.
-Resume file: N/A -- phase boundary, needs next phase planning
+Last session: 2026-02-09
+Stopped at: Phase 4, Plan 1 complete (provider client modules). Next: 04-02 (pipeline orchestration).
+Resume file: .planning/phases/04-video-audio-pipeline/04-02-PLAN.md
