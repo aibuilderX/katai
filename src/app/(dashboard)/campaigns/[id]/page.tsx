@@ -102,6 +102,7 @@ export default async function CampaignDetailPage(
 
   const serializedAssets = campaignAssets.map((a) => ({
     ...a,
+    metadata: (a.metadata as Record<string, unknown> | null) ?? null,
     createdAt: a.createdAt?.toISOString() || null,
   }))
 

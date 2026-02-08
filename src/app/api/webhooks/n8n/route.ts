@@ -17,8 +17,8 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { db } from "@/lib/db"
-import { campaigns, copyVariants, assets } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { campaigns, copyVariants, assets, brandProfiles } from "@/lib/db/schema"
+import { eq, and } from "drizzle-orm"
 
 interface CopyVariantPayload {
   platform: string
@@ -165,14 +165,12 @@ export async function POST(request: Request) {
     }
 
     // Insert image assets
+    const insertedAssets: Array<{ id: string; storageKey: string }> = []
     if (payload.imageUrls && payload.imageUrls.length > 0) {
       for (let i = 0; i < payload.imageUrls.length; i++) {
         const imageUrl = payload.imageUrls[i]
 
-        // Download image and upload to Supabase Storage
-        // For Phase 1, store the external URL directly
-        // Full Supabase Storage upload will be implemented when needed
-        await db.insert(assets).values({
+        const [inserted] = await db.insert(assets).values({
           campaignId,
           type: "image",
           storageKey: imageUrl,
@@ -181,7 +179,90 @@ export async function POST(request: Request) {
           height: "1024",
           mimeType: "image/png",
           modelUsed: "flux-1.1-pro-ultra",
+        }).returning({ id: assets.id, storageKey: assets.storageKey })
+        insertedAssets.push(inserted)
+      }
+    }
+
+    // Compositing stage: overlay Japanese text onto base images
+    if (insertedAssets.length > 0) {
+      await db
+        .update(campaigns)
+        .set({
+          progress: {
+            stage: "compositing",
+            copyStatus: "complete",
+            imageStatus: "complete",
+            compositingStatus: "generating",
+            percentComplete: 70,
+            currentStep: "テキスト合成中...",
+          },
         })
+        .where(eq(campaigns.id, campaignId))
+
+      try {
+        // Fetch campaign to get brand profile
+        const campaignRow = await db
+          .select({ brandProfileId: campaigns.brandProfileId })
+          .from(campaigns)
+          .where(eq(campaigns.id, campaignId))
+          .limit(1)
+
+        if (campaignRow.length > 0) {
+          const brand = await db
+            .select()
+            .from(brandProfiles)
+            .where(eq(brandProfiles.id, campaignRow[0].brandProfileId))
+            .limit(1)
+
+          // Fetch first copy variant (A案) for compositing
+          const firstVariant = await db
+            .select()
+            .from(copyVariants)
+            .where(
+              and(
+                eq(copyVariants.campaignId, campaignId),
+                eq(copyVariants.variantLabel, "A案")
+              )
+            )
+            .limit(1)
+
+          if (firstVariant.length > 0 && brand.length > 0) {
+            const variant = firstVariant[0]
+            const brandProfile = brand[0]
+            const baseImages = insertedAssets.map((a) => ({
+              assetId: a.id,
+              url: a.storageKey,
+              width: 1024,
+              height: 1024,
+            }))
+
+            const { compositeCampaignImages } = await import(
+              "@/lib/compositing"
+            )
+            await compositeCampaignImages({
+              campaignId,
+              baseImages,
+              copyVariant: {
+                headline: variant.headline,
+                bodyText: variant.bodyText,
+                ctaText: variant.ctaText,
+              },
+              brandProfile: {
+                fontPreference:
+                  brandProfile.fontPreference ?? "noto_sans_jp",
+                colors: brandProfile.colors,
+                logoUrl: brandProfile.logoUrl,
+              },
+            })
+          }
+        }
+      } catch (compositingError) {
+        console.error(
+          "Compositing failed after n8n webhook:",
+          compositingError
+        )
+        // Compositing failure is non-fatal -- base images still available
       }
     }
 
@@ -195,6 +276,7 @@ export async function POST(request: Request) {
           stage: "complete",
           copyStatus: "complete",
           imageStatus: "complete",
+          compositingStatus: "complete",
           percentComplete: 100,
           currentStep: "生成完了",
         },

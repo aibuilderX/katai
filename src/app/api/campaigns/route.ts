@@ -339,8 +339,9 @@ async function runDirectGeneration(
     const imageUrls = await generateCampaignImages(brief, brandProfile, 4)
 
     // Insert assets
+    const insertedAssets: Array<{ id: string; storageKey: string }> = []
     for (let i = 0; i < imageUrls.length; i++) {
-      await db.insert(assets).values({
+      const [inserted] = await db.insert(assets).values({
         campaignId,
         type: "image",
         storageKey: imageUrls[i],
@@ -350,24 +351,114 @@ async function runDirectGeneration(
         mimeType: "image/png",
         modelUsed: "flux-1.1-pro-ultra",
         prompt: `Campaign image ${i + 1}`,
-      })
+      }).returning({ id: assets.id, storageKey: assets.storageKey })
+      insertedAssets.push(inserted)
     }
 
-    // Mark campaign as complete
+    // Compositing stage: overlay Japanese text onto base images
     await db
       .update(campaigns)
       .set({
-        status: "complete",
-        completedAt: new Date(),
         progress: {
-          stage: "complete",
+          stage: "compositing",
           copyStatus: "complete",
           imageStatus: "complete",
-          percentComplete: 100,
-          currentStep: "生成完了",
+          compositingStatus: "generating",
+          percentComplete: 70,
+          currentStep: "テキスト合成中...",
         },
       })
       .where(eq(campaigns.id, campaignId))
+
+    try {
+      // Fetch first copy variant (A案) for compositing text
+      const firstVariant = await db
+        .select()
+        .from(copyVariants)
+        .where(
+          and(
+            eq(copyVariants.campaignId, campaignId),
+            eq(copyVariants.variantLabel, "A案")
+          )
+        )
+        .limit(1)
+
+      if (firstVariant.length > 0) {
+        const variant = firstVariant[0]
+        const baseImages = insertedAssets.map((a) => ({
+          assetId: a.id,
+          url: a.storageKey,
+          width: 1024,
+          height: 1024,
+        }))
+
+        const { compositeCampaignImages } = await import("@/lib/compositing")
+        await compositeCampaignImages({
+          campaignId,
+          baseImages,
+          copyVariant: {
+            headline: variant.headline,
+            bodyText: variant.bodyText,
+            ctaText: variant.ctaText,
+          },
+          brandProfile: {
+            fontPreference: brandProfile.fontPreference ?? "noto_sans_jp",
+            colors: brandProfile.colors,
+            logoUrl: brandProfile.logoUrl,
+          },
+          onProgress: async (percent, step) => {
+            await db
+              .update(campaigns)
+              .set({
+                progress: {
+                  stage: "compositing",
+                  copyStatus: "complete",
+                  imageStatus: "complete",
+                  compositingStatus: "generating",
+                  percentComplete: 70 + Math.round(percent * 0.25),
+                  currentStep: step,
+                },
+              })
+              .where(eq(campaigns.id, campaignId))
+          },
+        })
+      }
+
+      // Mark campaign as complete with compositing done
+      await db
+        .update(campaigns)
+        .set({
+          status: "complete",
+          completedAt: new Date(),
+          progress: {
+            stage: "complete",
+            copyStatus: "complete",
+            imageStatus: "complete",
+            compositingStatus: "complete",
+            percentComplete: 100,
+            currentStep: "生成完了",
+          },
+        })
+        .where(eq(campaigns.id, campaignId))
+    } catch (compositingError) {
+      console.error("Compositing failed:", compositingError)
+      // Compositing failed but base images exist -- mark as partial
+      await db
+        .update(campaigns)
+        .set({
+          status: "complete",
+          completedAt: new Date(),
+          progress: {
+            stage: "complete",
+            copyStatus: "complete",
+            imageStatus: "complete",
+            compositingStatus: "failed",
+            percentComplete: 100,
+            currentStep: "生成完了（テキスト合成失敗）",
+          },
+        })
+        .where(eq(campaigns.id, campaignId))
+    }
   } catch (error) {
     console.error("Direct generation error:", error)
     await db

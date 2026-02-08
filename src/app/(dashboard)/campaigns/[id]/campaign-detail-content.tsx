@@ -47,6 +47,7 @@ interface CampaignDetailContentProps {
   }[]
   assets: {
     id: string
+    type: string
     storageKey: string
     fileName: string | null
     width: string | null
@@ -54,6 +55,7 @@ interface CampaignDetailContentProps {
     mimeType: string | null
     modelUsed: string | null
     prompt: string | null
+    metadata?: Record<string, unknown> | null
     createdAt: string | null
   }[]
   generationTime: string | null
