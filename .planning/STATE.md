@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 3 - Multi-Platform Formatting & Delivery
+**Current focus:** Phase 3 complete. Ready for Phase 4.
 
 ## Current Position
 
 Phase: 3 of 6 (Multi-Platform Formatting & Delivery)
-Plan: 3 of 4 in current phase
-Status: In progress (03-03 complete, 03-04 remaining)
-Last activity: 2026-02-08 -- Completed 03-03-PLAN.md
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 03-04-PLAN.md
 
-Progress: [███████████████░░░░░] 75% (Phase 3: 3/4 plans)
+Progress: [████████████████████] 100% (Phase 3: 4/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: ~10 min
-- Total execution time: ~126 min
+- Total plans completed: 14
+- Average duration: ~9 min
+- Total execution time: ~129 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███████████████░░░░░] 75% (Ph
 |-------|-------|-------|----------|
 | 1 | 5/5 | ~69 min | ~14 min |
 | 2 | 4/4 | ~18 min | ~5 min |
-| 3 | 3/4 | ~39 min | ~13 min |
+| 3 | 4/4 | ~42 min | ~11 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04, 03-01, 03-02, 03-01(copy), 03-03
-- Note: 03-03 took 32min due to npm/pnpm troubleshooting, not code complexity
+- Last 5 plans: 03-01, 03-02, 03-01(copy), 03-03, 03-04
+- Note: 03-04 completed in 3min (UI components only, no backend)
 
 *Updated after each plan completion*
 
@@ -81,6 +81,9 @@ Recent decisions affecting current work:
 - [03-03]: Platform resize and email stages non-fatal -- campaign completes with warning
 - [03-03]: Layout A composited image selected per base image for resize source
 - [03-03]: Email HTML uploaded to platform-images bucket alongside image assets
+- [03-04]: DownloadButton in sidebar, visible only for complete/partial campaigns
+- [03-04]: Extreme aspect ratio threshold >3x or <1/3x for "要調整" warning badge
+- [03-04]: Copy sections in platform grid collapsed by default (accordion pattern)
 
 ### Pending Todos
 
@@ -95,5 +98,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 3, Plans 01-03 complete. Next: 03-04-PLAN.md (UI gallery and download button).
-Resume file: .planning/phases/03-multi-platform-formatting/03-04-PLAN.md
+Stopped at: Phase 3 complete (all 4 plans). Next: Phase 4 planning/research.
+Resume file: N/A -- phase boundary, needs next phase planning
