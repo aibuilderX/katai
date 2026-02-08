@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 2 - Japanese Text Compositing (Complete)
+**Current focus:** Phase 3 - Multi-Platform Formatting & Delivery
 
 ## Current Position
 
-Phase: 2 of 6 (Japanese Text Compositing)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 02-04-PLAN.md
+Phase: 3 of 6 (Multi-Platform Formatting & Delivery)
+Plan: 2 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 03-02-PLAN.md
 
-Progress: [██████████] 100% (Phase 2: 4/4 plans)
+Progress: [█████████████░░░░░░░] 65% (Phase 3: 2/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: ~10 min
-- Total execution time: ~87 min
+- Total plans completed: 11
+- Average duration: ~8 min
+- Total execution time: ~89 min
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [██████████] 100% (Phase 2: 4/4 plans)
 |-------|-------|-------|----------|
 | 1 | 5/5 | ~69 min | ~14 min |
 | 2 | 4/4 | ~18 min | ~5 min |
+| 3 | 2/4 | ~2 min | ~1 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01, 02-02, 02-03, 02-04
-- Trend: Accelerating (Phase 2 averaging ~5 min/plan)
+- Last 5 plans: 02-02, 02-03, 02-04, 03-01, 03-02
+- Trend: Accelerating (Phase 3 averaging ~1 min/plan)
 
 *Updated after each plan completion*
 
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - [02-04]: Dynamic import for compositing module to keep initial bundle small
 - [02-04]: First copy variant (A案) used for compositing text overlay
 - [02-04]: Tagline included only if bodyText <= 30 characters
+- [03-02]: 3x aspect ratio threshold for cover vs contain resize strategy
+- [03-02]: Sequential resize processing (not parallel) to avoid sharp memory spikes
+- [03-02]: Japanese labels stripped to ASCII for filenames, original preserved in dimensionLabel
 
 ### Pending Todos
 
@@ -81,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 2 complete. Ready for Phase 3 (Multi-Platform Formatting & Delivery).
-Resume file: .planning/phases/03-multi-platform-formatting/
+Stopped at: Phase 3, Plan 02 complete. Next: 03-03-PLAN.md (format pipeline orchestrator).
+Resume file: .planning/phases/03-multi-platform-formatting/03-03-PLAN.md
