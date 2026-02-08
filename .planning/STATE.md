@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 4 in progress. Provider client modules complete.
+**Current focus:** Phase 4 in progress. Pipeline orchestration and integration complete.
 
 ## Current Position
 
 Phase: 4 of 6 (Video & Audio Pipeline)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-09 -- Completed 04-01-PLAN.md
+Last activity: 2026-02-09 -- Completed 04-02-PLAN.md
 
-Progress: [█████████████████░░░] 85% (Phase 4: 1/3 plans)
+Progress: [██████████████████░░] 89% (Phase 4: 2/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: ~9 min
-- Total execution time: ~135 min
+- Total execution time: ~140 min
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [█████████████████░░░] 85% (Ph
 | 1 | 5/5 | ~69 min | ~14 min |
 | 2 | 4/4 | ~18 min | ~5 min |
 | 3 | 4/4 | ~42 min | ~11 min |
-| 4 | 1/3 | ~6 min | ~6 min |
+| 4 | 2/3 | ~11 min | ~6 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02, 03-01(copy), 03-03, 03-04, 04-01
-- Note: 04-01 completed in 6min (SDK install + 4 client modules + constants)
+- Last 5 plans: 03-01(copy), 03-03, 03-04, 04-01, 04-02
+- Note: 04-02 completed in 5min (pipeline orchestrator + webhook/campaign/ZIP extensions)
 
 *Updated after each plan completion*
 
@@ -89,12 +89,18 @@ Recent decisions affecting current work:
 - [04-01]: Kling accessed via fal.ai proxy for simpler API key auth (no JWT token management)
 - [04-01]: ElevenLabs language text normalization omitted by default (latency concern)
 - [04-01]: Provider health tracker is in-memory only (resets on server restart, acceptable for MVP)
+- [04-02]: downloadToStorage defined locally in webhook handler (not shared utility) for scope management
+- [04-02]: Video pipeline uses dynamic imports for all provider modules to keep initial bundle small
+- [04-02]: Stage-specific JSONB merge for progress updates prevents race conditions between concurrent callbacks
+- [04-02]: Video/audio ZIP entries fetched via Supabase Storage admin client (storage keys are paths, not URLs)
 
 ### Pending Todos
 
 - Run `ALTER TABLE campaigns REPLICA IDENTITY FULL;` for optimal Supabase Realtime (optional, polling works without it)
 - Create `composited-images` bucket in Supabase Storage (public: true) for composited image uploads
 - Create `platform-images` bucket in Supabase Storage (public: true) for platform-resized images
+- Create `campaign-videos` bucket in Supabase Storage (public: true) for video asset storage
+- Create `campaign-audio` bucket in Supabase Storage (public: true) for audio asset storage
 - Complete 04-USER-SETUP.md: configure Runway, ElevenLabs, fal.ai, HeyGen API keys and voice/avatar selections
 
 ### Blockers/Concerns
@@ -104,5 +110,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Phase 4, Plan 1 complete (provider client modules). Next: 04-02 (pipeline orchestration).
-Resume file: .planning/phases/04-video-audio-pipeline/04-02-PLAN.md
+Stopped at: Phase 4, Plan 2 complete (pipeline orchestration). Next: 04-03 (progressive UI).
+Resume file: .planning/phases/04-video-audio-pipeline/04-03-PLAN.md
