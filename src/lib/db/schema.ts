@@ -40,6 +40,7 @@ export interface CampaignProgress {
   stage: string
   copyStatus: "pending" | "generating" | "complete" | "failed"
   imageStatus: "pending" | "generating" | "complete" | "failed"
+  compositingStatus?: "pending" | "generating" | "complete" | "failed"
   percentComplete: number
   currentStep: string
 }
