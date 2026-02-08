@@ -4,8 +4,9 @@
  */
 
 import type { CampaignBrief } from "@/types/campaign"
+import type { PlatformCopyConstraints } from "@/lib/platforms/copy-constraints"
 
-interface BrandProfileForPrompt {
+export interface BrandProfileForPrompt {
   name: string
   colors?: { primary: string; secondary: string; accent: string; background: string } | null
   defaultRegister: string
@@ -189,6 +190,98 @@ export function buildCopyPrompt(
 - 各バリエーションは異なるアプローチ（感情訴求、機能訴求、緊急性訴求、ストーリー訴求など）を取ること
 - プラットフォームの特性を考慮した文字数にすること
 - deliver_copy_variants ツールを使って結果を返してください`)
+
+  return parts.join("\n")
+}
+
+/**
+ * Build a platform-aware copy generation prompt with explicit per-platform character limits.
+ * Instructs Claude to generate 4 variants PER PLATFORM with enforced constraints.
+ *
+ * @param brief - Campaign brief with objectives, audience, platforms
+ * @param brand - Brand profile with identity, tone, product info
+ * @param constraints - Platform copy constraints for each selected platform
+ * @returns User prompt string for platform-specific copy generation
+ */
+export function buildPlatformCopyPrompt(
+  brief: CampaignBrief,
+  brand: BrandProfileForPrompt,
+  constraints: PlatformCopyConstraints[]
+): string {
+  const register = brief.registerOverride || brand.defaultRegister
+  const registerInstructions =
+    REGISTER_INSTRUCTIONS[register] || REGISTER_INSTRUCTIONS["standard"]
+
+  const objectiveLabel = OBJECTIVE_LABELS[brief.objective] || brief.objective
+
+  const parts: string[] = []
+
+  parts.push(`以下のキャンペーンブリーフに基づいて、プラットフォーム別に最適化された日本語の広告コピーを生成してください。
+
+【キャンペーン概要】
+目的: ${objectiveLabel}`)
+
+  if (brief.targetAudience) {
+    parts.push(`ターゲットオーディエンス: ${brief.targetAudience}`)
+  }
+
+  if (brief.campaignProductInfo) {
+    parts.push(`\n【キャンペーン固有の商品情報】\n${brief.campaignProductInfo}`)
+  }
+
+  if (brief.creativeMoodTags && brief.creativeMoodTags.length > 0) {
+    parts.push(`\nムード: ${brief.creativeMoodTags.join("、")}`)
+  }
+
+  if (brief.creativeDirection) {
+    parts.push(`クリエイティブ方向性: ${brief.creativeDirection}`)
+  }
+
+  parts.push(`\n${registerInstructions}`)
+
+  // Add per-platform character limit instructions
+  parts.push(`\n【プラットフォーム別文字数制限】
+以下の各プラットフォームに対して、それぞれ正確に4つのバリエーション（A案〜D案）を生成してください。
+文字数制限を厳守してください。`)
+
+  for (const constraint of constraints) {
+    const hashtagNote =
+      constraint.hashtags.required && constraint.hashtags.max > 0
+        ? `ハッシュタグ: ${constraint.hashtags.max}個（必須）`
+        : constraint.hashtags.max > 0
+          ? `ハッシュタグ: 最大${constraint.hashtags.max}個（任意）`
+          : "ハッシュタグ: なし"
+
+    parts.push(`
+■ ${constraint.platformId.toUpperCase()}
+  ${constraint.headline.label}: 最大${constraint.headline.maxChars}文字
+  ${constraint.body.label}: 最大${constraint.body.maxChars}文字
+  ${constraint.cta.label}: 最大${constraint.cta.maxChars}文字
+  ${hashtagNote}`)
+
+    if (constraint.formatNotes.length > 0) {
+      parts.push(`  注意事項:`)
+      for (const note of constraint.formatNotes) {
+        parts.push(`    - ${note}`)
+      }
+    }
+  }
+
+  parts.push(`
+【出力要件】
+各プラットフォームに対して正確に4つのバリエーション（A案〜D案）を生成してください。
+
+各バリエーションに含めるもの:
+- headline: プラットフォーム別の文字数制限に従った見出し
+- body: プラットフォーム別の文字数制限に従った本文
+- cta: プラットフォーム別の文字数制限に従ったCTAテキスト
+- hashtags: プラットフォームの要件に従ったハッシュタグ配列（不要な場合は空配列）
+
+重要:
+- 全てのバリエーションで同一の敬語レベルを維持すること
+- 各バリエーションは異なるアプローチ（感情訴求、機能訴求、緊急性訴求、ストーリー訴求など）を取ること
+- 文字数制限を厳守すること（制限を超えないよう注意）
+- deliver_platform_copy ツールを使って結果を返してください`)
 
   return parts.join("\n")
 }
