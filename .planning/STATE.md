@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 2 - Japanese Text Compositing (In Progress)
+**Current focus:** Phase 2 - Japanese Text Compositing (Complete)
 
 ## Current Position
 
 Phase: 2 of 6 (Japanese Text Compositing)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 02-03-PLAN.md
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 02-04-PLAN.md
 
-Progress: [███████░░░] 75% (Phase 2: 3/4 plans)
+Progress: [██████████] 100% (Phase 2: 4/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: ~10 min
-- Total execution time: ~81 min
+- Total execution time: ~87 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 5/5 | ~69 min | ~14 min |
-| 2 | 3/4 | ~12 min | ~4 min |
+| 2 | 4/4 | ~18 min | ~5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-05, 02-01, 02-02, 02-03
-- Trend: Accelerating (02-03 completed in ~3 min)
+- Last 5 plans: 02-01, 02-02, 02-03, 02-04
+- Trend: Accelerating (Phase 2 averaging ~5 min/plan)
 
 *Updated after each plan completion*
 
@@ -64,10 +64,15 @@ Recent decisions affecting current work:
 - [02-03]: Tategaki eligibility: headline <= 12 chars, >60% CJK, aspect ratio <= 1.5:1
 - [02-03]: Coordinate validation: 20px grid snap, 40px edge padding, min 200px headline maxWidth
 - [02-03]: Logo position fixed bottom-right, not varied across layout alternatives
+- [02-04]: Compositing failure non-fatal: campaign completes with base images, compositingStatus tracked separately
+- [02-04]: Dynamic import for compositing module to keep initial bundle small
+- [02-04]: First copy variant (A案) used for compositing text overlay
+- [02-04]: Tagline included only if bodyText <= 30 characters
 
 ### Pending Todos
 
 - Run `ALTER TABLE campaigns REPLICA IDENTITY FULL;` for optimal Supabase Realtime (optional, polling works without it)
+- Create `composited-images` bucket in Supabase Storage (public: true) for composited image uploads
 
 ### Blockers/Concerns
 
@@ -76,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 2, Plan 3 complete. Ready for Plan 4 (compositing pipeline orchestrator)
-Resume file: .planning/phases/02-japanese-text-compositing/02-04-PLAN.md
+Stopped at: Phase 2 complete. Ready for Phase 3 (Multi-Platform Formatting & Delivery).
+Resume file: .planning/phases/03-multi-platform-formatting/
