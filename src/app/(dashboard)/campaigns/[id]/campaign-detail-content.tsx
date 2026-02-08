@@ -1,18 +1,17 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import {
   ChevronRight,
-  Download,
   RefreshCw,
-  Loader2,
   AlertCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CopyTab } from "@/components/campaign/copy-tab"
 import { ImageTab } from "@/components/campaign/image-tab"
+import { PlatformGridView } from "@/components/campaign/platform-grid-view"
+import { DownloadButton } from "@/components/campaign/download-button"
 import { CampaignSidebar } from "@/components/campaign/campaign-sidebar"
 import { GenerationProgress } from "@/components/campaign/generation-progress"
 import type { CampaignBrief, CampaignProgress } from "@/lib/db/schema"
@@ -203,10 +202,6 @@ export function CampaignDetailContent({
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="inline-flex items-center gap-2 rounded-md bg-vermillion px-4 py-2 text-sm font-bold text-text-inverse transition-colors hover:bg-vermillion-hover">
-            <Download className="size-4" />
-            <span>ダウンロード</span>
-          </button>
           <Link
             href="/campaigns/new"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-hover"
@@ -235,6 +230,12 @@ export function CampaignDetailContent({
               >
                 画像
               </TabsTrigger>
+              <TabsTrigger
+                value="platforms"
+                className="data-[state=active]:after:bg-warm-gold"
+              >
+                プラットフォーム
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="copy">
@@ -248,20 +249,29 @@ export function CampaignDetailContent({
             <TabsContent value="images">
               <ImageTab assets={assets} />
             </TabsContent>
+
+            <TabsContent value="platforms">
+              <PlatformGridView assets={assets} copyVariants={copyVariants} />
+            </TabsContent>
           </Tabs>
         </div>
 
         {/* Right sidebar */}
-        <CampaignSidebar
-          brandName={brand?.name || "不明"}
-          targetAudience={brief.targetAudience || ""}
-          platforms={brief.platforms || []}
-          toneTags={brand?.toneTags || []}
-          register={brief.registerOverride || brand?.defaultRegister || "standard"}
-          generationTime={generationTime}
-          variantCount={copyVariants.length}
-          campaignId={campaign.id}
-        />
+        <div className="flex w-full shrink-0 flex-col gap-6 lg:w-[300px]">
+          {(campaign.status === "complete" || campaign.status === "partial") && (
+            <DownloadButton campaignId={campaign.id} />
+          )}
+          <CampaignSidebar
+            brandName={brand?.name || "不明"}
+            targetAudience={brief.targetAudience || ""}
+            platforms={brief.platforms || []}
+            toneTags={brand?.toneTags || []}
+            register={brief.registerOverride || brand?.defaultRegister || "standard"}
+            generationTime={generationTime}
+            variantCount={copyVariants.length}
+            campaignId={campaign.id}
+          />
+        </div>
       </div>
     </div>
   )
