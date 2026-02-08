@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 3 of 6 (Multi-Platform Formatting & Delivery)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-08 -- Completed 03-02-PLAN.md
+Last activity: 2026-02-08 -- Completed 03-01-PLAN.md
 
-Progress: [█████████████░░░░░░░] 65% (Phase 3: 2/4 plans)
+Progress: [███████████████░░░░░] 75% (Phase 3: 3/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~8 min
-- Total execution time: ~89 min
+- Total execution time: ~94 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [█████████████░░░░░░░] 65% (Ph
 |-------|-------|-------|----------|
 | 1 | 5/5 | ~69 min | ~14 min |
 | 2 | 4/4 | ~18 min | ~5 min |
-| 3 | 2/4 | ~2 min | ~1 min |
+| 3 | 3/4 | ~7 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02, 02-03, 02-04, 03-01, 03-02
-- Trend: Accelerating (Phase 3 averaging ~1 min/plan)
+- Last 5 plans: 02-03, 02-04, 03-01, 03-02, 03-01(copy)
+- Trend: Accelerating (Phase 3 averaging ~2 min/plan)
 
 *Updated after each plan completion*
 
@@ -69,6 +69,10 @@ Recent decisions affecting current work:
 - [02-04]: Dynamic import for compositing module to keep initial bundle small
 - [02-04]: First copy variant (A案) used for compositing text overlay
 - [02-04]: Tagline included only if bodyText <= 30 characters
+- [03-01]: Codepoint-accurate character counting via [...str].length (not .length which double-counts surrogates)
+- [03-01]: Single Claude API call for all platform variants (max_tokens 8192) for cost efficiency
+- [03-01]: Server-side truncation as safety net -- log warnings, don't reject over-limit copy
+- [03-01]: Ellipsis character (U+2026) as single-char truncation marker
 - [03-02]: 3x aspect ratio threshold for cover vs contain resize strategy
 - [03-02]: Sequential resize processing (not parallel) to avoid sharp memory spikes
 - [03-02]: Japanese labels stripped to ASCII for filenames, original preserved in dimensionLabel
@@ -85,5 +89,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 3, Plan 02 complete. Next: 03-03-PLAN.md (format pipeline orchestrator).
+Stopped at: Phase 3, Plans 01-03 complete. Next: 03-03-PLAN.md (format pipeline orchestrator) or 03-04-PLAN.md.
 Resume file: .planning/phases/03-multi-platform-formatting/03-03-PLAN.md
