@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 1 - Foundation & Core Pipeline (COMPLETE)
+**Current focus:** Phase 2 - Japanese Text Compositing (In Progress)
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation & Core Pipeline)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-02-07 -- Completed 01-05-PLAN.md
+Phase: 2 of 6 (Japanese Text Compositing)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 02-01-PLAN.md
 
-Progress: [██████████] 100% (Phase 1)
+Progress: [██░░░░░░░░] 25% (Phase 2: 1/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~14 min
-- Total execution time: ~69 min
+- Total plans completed: 6
+- Average duration: ~13 min
+- Total execution time: ~75 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 5/5 | ~69 min | ~14 min |
+| 2 | 1/4 | ~6 min | ~6 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02, 01-03, 01-04, 01-05
-- Trend: Steady, improving (01-05 completed in ~8 min)
+- Last 5 plans: 01-03, 01-04, 01-05, 02-01
+- Trend: Accelerating (02-01 completed in ~6 min)
 
 *Updated after each plan completion*
 
@@ -54,6 +55,9 @@ Recent decisions affecting current work:
 - [01-05]: Optimistic UI for favorite toggle with API revert on failure
 - [01-05]: Fallback 5s polling alongside Supabase Realtime (works without REPLICA IDENTITY FULL)
 - [01-05]: Auto-refresh page 1.5s after generation completes to re-fetch full results
+- [02-01]: BudouX singleton parser loaded at module level for performance
+- [02-01]: Character width estimation: CJK = 1em, ASCII = 0.5em via Unicode ranges
+- [02-01]: Kinsoku cascade capped at 3 iterations to prevent infinite loops
 
 ### Pending Todos
 
@@ -65,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Phase 1 complete. Ready for Phase 2 (Japanese Text Compositing)
-Resume file: None
+Last session: 2026-02-08
+Stopped at: Phase 2, Plan 1 complete. Ready for Plan 2 (SVG text renderer)
+Resume file: .planning/phases/02-japanese-text-compositing/02-02-PLAN.md
