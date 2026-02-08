@@ -12,7 +12,7 @@ AI Content Studio delivers a complete Japanese-market campaign kit generator in 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Core Pipeline** - Auth, dashboard, brand profiles, brief submission, Claude copy generation, Flux image generation, AI intelligence foundation
+- [x] **Phase 1: Foundation & Core Pipeline** - Auth, dashboard, brand profiles, brief submission, Claude copy generation, Flux image generation, AI intelligence foundation
 - [ ] **Phase 2: Japanese Text Compositing** - Server-side JP text overlay with kinsoku shori, keigo register control, brand kit compositing
 - [ ] **Phase 3: Multi-Platform Formatting & Delivery** - 7 platform formats, platform-specific copy/sizing, campaign kit packaging, review grid, end-to-end orchestration
 - [ ] **Phase 4: Video & Audio Pipeline** - Kling video, Runway cinematic, ElevenLabs voiceover, HeyGen avatar, fallback routing, progressive generation UI
@@ -38,7 +38,7 @@ Plans:
 - [x] 01-02-PLAN.md — Supabase Auth (email/password + Google SSO), proxy.ts, dashboard shell with sidebar, hero CTA, settings
 - [x] 01-03-PLAN.md — Brand profile wizard (7 steps), brand CRUD API, brand list/edit pages
 - [x] 01-04-PLAN.md — Campaign brief form, Claude copy generation, Flux image generation, n8n webhook integration
-- [ ] 01-05-PLAN.md — Campaign results UI (copy/image tabs, platform-adaptive variants, real-time progress)
+- [x] 01-05-PLAN.md — Campaign results UI (copy/image tabs, platform-adaptive variants, real-time progress)
 
 ### Phase 2: Japanese Text Compositing
 **Goal**: Generated images have correctly rendered Japanese text overlaid server-side with proper typography, line-breaking, and brand styling
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Core Pipeline | 4/5 | In progress | - |
+| 1. Foundation & Core Pipeline | 5/5 | Complete | 2026-02-07 |
 | 2. Japanese Text Compositing | 0/2 | Not started | - |
 | 3. Multi-Platform Formatting & Delivery | 0/3 | Not started | - |
 | 4. Video & Audio Pipeline | 0/3 | Not started | - |
