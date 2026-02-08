@@ -85,12 +85,12 @@ Plans:
   3. System generates natural Japanese voiceover via ElevenLabs with correct intonation
   4. System generates AI avatar presenter ads via HeyGen with Japanese lip-sync
   5. Dashboard shows progressive generation status (copy first, images next, video last) and system auto-routes to fallback models on provider failure
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-- [ ] 04-03: TBD
+- [ ] 04-01-PLAN.md — Provider client modules (Runway, ElevenLabs, Kling, HeyGen), type extensions, constants, provider health tracker
+- [ ] 04-02-PLAN.md — Pipeline orchestration, webhook handler extension, Supabase Storage download, ZIP packager update
+- [ ] 04-03-PLAN.md — Progressive generation UI for video/audio stages, video player, video gallery tab
 
 ### Phase 5: Workflow & Intelligence
 **Goal**: Agencies can iterate on campaigns with selective regeneration, formal approval workflows, templates, and AI-powered quality assurance
@@ -140,4 +140,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-09*
