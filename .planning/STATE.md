@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 Phase: 3 of 6 (Multi-Platform Formatting & Delivery)
 Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 03-01-PLAN.md
+Status: In progress (03-03 complete, 03-04 remaining)
+Last activity: 2026-02-08 -- Completed 03-03-PLAN.md
 
 Progress: [███████████████░░░░░] 75% (Phase 3: 3/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: ~8 min
-- Total execution time: ~94 min
+- Total plans completed: 13
+- Average duration: ~10 min
+- Total execution time: ~126 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███████████████░░░░░] 75% (Ph
 |-------|-------|-------|----------|
 | 1 | 5/5 | ~69 min | ~14 min |
 | 2 | 4/4 | ~18 min | ~5 min |
-| 3 | 3/4 | ~7 min | ~2 min |
+| 3 | 3/4 | ~39 min | ~13 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03, 02-04, 03-01, 03-02, 03-01(copy)
-- Trend: Accelerating (Phase 3 averaging ~2 min/plan)
+- Last 5 plans: 02-04, 03-01, 03-02, 03-01(copy), 03-03
+- Note: 03-03 took 32min due to npm/pnpm troubleshooting, not code complexity
 
 *Updated after each plan completion*
 
@@ -76,11 +76,17 @@ Recent decisions affecting current work:
 - [03-02]: 3x aspect ratio threshold for cover vs contain resize strategy
 - [03-02]: Sequential resize processing (not parallel) to avoid sharp memory spikes
 - [03-02]: Japanese labels stripped to ASCII for filenames, original preserved in dimensionLabel
+- [03-03]: archiver library with zlib level 6 for ZIP creation
+- [03-03]: Batched parallel asset fetching (groups of 5) in ZIP builder
+- [03-03]: Platform resize and email stages non-fatal -- campaign completes with warning
+- [03-03]: Layout A composited image selected per base image for resize source
+- [03-03]: Email HTML uploaded to platform-images bucket alongside image assets
 
 ### Pending Todos
 
 - Run `ALTER TABLE campaigns REPLICA IDENTITY FULL;` for optimal Supabase Realtime (optional, polling works without it)
 - Create `composited-images` bucket in Supabase Storage (public: true) for composited image uploads
+- Create `platform-images` bucket in Supabase Storage (public: true) for platform-resized images
 
 ### Blockers/Concerns
 
@@ -89,5 +95,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 3, Plans 01-03 complete. Next: 03-03-PLAN.md (format pipeline orchestrator) or 03-04-PLAN.md.
-Resume file: .planning/phases/03-multi-platform-formatting/03-03-PLAN.md
+Stopped at: Phase 3, Plans 01-03 complete. Next: 03-04-PLAN.md (UI gallery and download button).
+Resume file: .planning/phases/03-multi-platform-formatting/03-04-PLAN.md
