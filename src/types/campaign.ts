@@ -24,6 +24,9 @@ export interface CampaignProgress {
   compositingStatus?: "pending" | "generating" | "complete" | "failed"
   platformResizeStatus?: "pending" | "generating" | "complete" | "failed"
   emailStatus?: "pending" | "generating" | "complete" | "failed"
+  voiceoverStatus?: "pending" | "generating" | "complete" | "failed" | "skipped"
+  videoStatus?: "pending" | "generating" | "complete" | "failed" | "skipped"
+  avatarStatus?: "pending" | "generating" | "complete" | "failed" | "skipped"
   percentComplete: number
   currentStep: string
 }

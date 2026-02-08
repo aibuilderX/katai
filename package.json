@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",
+    "@elevenlabs/elevenlabs-js": "^2.34.0",
     "@fontsource/noto-sans-jp": "^5.2.9",
+    "@runwayml/sdk": "^3.11.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "@tanstack/react-query": "^5.90.20",
