@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 5 complete. All 3 plans executed (schema, templates/QA, approval workflow). Ready for Phase 6.
+**Current focus:** Phase 6 in progress. Plan 01 (billing foundation) complete. Continuing with Plan 02.
 
 ## Current Position
 
-Phase: 5 of 6 (Workflow & Intelligence)
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-02-09 -- Completed 05-03-PLAN.md
+Phase: 6 of 6 (Billing & Compliance)
+Plan: 1 of 4 in current phase
+Status: In Progress
+Last activity: 2026-02-09 -- Completed 06-01-PLAN.md
 
-Progress: [████████████████████] 100% (Phase 5: 3/3 plans)
+Progress: [█████░░░░░░░░░░░░░░░] 25% (Phase 6: 1/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: ~8 min
-- Total execution time: ~159 min
+- Total execution time: ~164 min
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [████████████████████] 100% (P
 | 3 | 4/4 | ~42 min | ~11 min |
 | 4 | 3/3 | ~15 min | ~5 min |
 | 5 | 3/3 | ~15 min | ~5 min |
+| 6 | 1/4 | ~5 min | ~5 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02, 04-03, 05-01, 05-02, 05-03
-- Note: Phase 5 all 3 plans at ~5min each (consistent velocity)
+- Last 5 plans: 04-03, 05-01, 05-02, 05-03, 06-01
+- Note: Phase 6 plan 01 at ~5min (consistent velocity)
 
 *Updated after each plan completion*
 
@@ -110,6 +111,9 @@ Recent decisions affecting current work:
 - [05-03]: Approval panel shown only for complete/partial campaigns
 - [05-03]: History timeline collapsible by default to save sidebar space
 - [05-03]: GET endpoint on approve route for workflow + history retrieval with actor display names
+- [06-01]: Atomic credit deduction using SQL WHERE credit_balance >= amount to prevent negative balances
+- [06-01]: Credit ledger records balanceAfter for audit trail without recomputation
+- [06-01]: Stripe singleton with descriptive error for missing env var
 
 ### Pending Todos
 
@@ -119,6 +123,7 @@ Recent decisions affecting current work:
 - Create `campaign-videos` bucket in Supabase Storage (public: true) for video asset storage
 - Create `campaign-audio` bucket in Supabase Storage (public: true) for audio asset storage
 - Complete 04-USER-SETUP.md: configure Runway, ElevenLabs, fal.ai, HeyGen API keys and voice/avatar selections
+- Configure Stripe: API keys, webhook secret, create 3 subscription products (Starter/Pro/Business) with JPY prices, enable Customer Portal
 
 ### Blockers/Concerns
 
@@ -127,5 +132,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-03-PLAN.md. Phase 5 complete. Next: Phase 6.
-Resume file: .planning/phases/05-workflow-intelligence/05-03-SUMMARY.md
+Stopped at: Completed 06-01-PLAN.md. Billing foundation complete. Next: 06-02 (checkout/portal).
+Resume file: .planning/phases/06-billing-compliance/06-01-SUMMARY.md
