@@ -10,6 +10,8 @@ import {
 } from "@/lib/db/schema"
 import { eq, desc, and } from "drizzle-orm"
 import crypto from "crypto"
+import { deductCredits } from "@/lib/billing/credits"
+import { estimateCampaignCost } from "@/lib/billing/estimate"
 
 export async function GET() {
   const supabase = await createClient()
@@ -131,6 +133,32 @@ export async function POST(request: Request) {
   }
 
   const brandProfile = brand[0]
+
+  // Credit gate: estimate cost and deduct credits before campaign creation
+  const estimate = estimateCampaignCost({
+    platforms,
+    includeVideo: body.includeVideo ?? false,
+    includeVoiceover: body.includeVoiceover ?? false,
+    includeAvatar: body.includeAvatar ?? false,
+  })
+
+  const creditResult = await deductCredits(
+    teamId,
+    estimate.totalCredits,
+    null,
+    "キャンペーン生成"
+  )
+
+  if (!creditResult.success) {
+    return NextResponse.json(
+      {
+        error: "クレジットが不足しています",
+        required: estimate.totalCredits,
+        currentBalance: creditResult.remainingBalance,
+      },
+      { status: 402 }
+    )
+  }
 
   // Build brief JSONB
   const brief = {
