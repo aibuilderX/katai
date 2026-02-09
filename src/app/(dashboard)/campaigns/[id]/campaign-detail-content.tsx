@@ -6,6 +6,7 @@ import {
   RefreshCw,
   AlertCircle,
   Film,
+  Copy,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -208,6 +209,13 @@ export function CampaignDetailContent({
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href={`/campaigns/new?clone=${campaign.id}`}
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-hover"
+          >
+            <Copy className="size-4" />
+            <span>複製して再実行</span>
+          </Link>
           <Link
             href="/campaigns/new"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-hover"

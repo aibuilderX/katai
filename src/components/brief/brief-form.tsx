@@ -35,25 +35,42 @@ interface BrandOption {
   defaultRegister: string
 }
 
-export function BriefForm() {
+export interface BriefFormInitialValues {
+  objective?: string
+  targetAudience?: string
+  platforms?: string[]
+  registerOverride?: string
+  creativeMoodTags?: string[]
+  creativeDirection?: string
+  campaignName?: string
+  brandProfileId?: string
+  parentCampaignId?: string
+}
+
+interface BriefFormProps {
+  initialValues?: BriefFormInitialValues
+}
+
+export function BriefForm({ initialValues }: BriefFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [brands, setBrands] = useState<BrandOption[]>([])
   const [brandsLoading, setBrandsLoading] = useState(true)
 
-  // Form state
-  const [brandProfileId, setBrandProfileId] = useState("")
-  const [campaignName, setCampaignName] = useState("")
-  const [objective, setObjective] = useState("")
-  const [targetAudience, setTargetAudience] = useState("")
-  const [platforms, setPlatforms] = useState<string[]>([])
-  const [registerOverride, setRegisterOverride] = useState("")
-  const [moodTags, setMoodTags] = useState<string[]>([])
-  const [creativeDirection, setCreativeDirection] = useState("")
+  // Form state -- initialized from template/clone defaults if provided
+  const [brandProfileId, setBrandProfileId] = useState(initialValues?.brandProfileId || "")
+  const [campaignName, setCampaignName] = useState(initialValues?.campaignName || "")
+  const [objective, setObjective] = useState(initialValues?.objective || "")
+  const [targetAudience, setTargetAudience] = useState(initialValues?.targetAudience || "")
+  const [platforms, setPlatforms] = useState<string[]>(initialValues?.platforms || [])
+  const [registerOverride, setRegisterOverride] = useState(initialValues?.registerOverride || "")
+  const [moodTags, setMoodTags] = useState<string[]>(initialValues?.creativeMoodTags || [])
+  const [creativeDirection, setCreativeDirection] = useState(initialValues?.creativeDirection || "")
   const [referenceImageUrl, setReferenceImageUrl] = useState<
     string | undefined
   >()
   const [campaignProductInfo, setCampaignProductInfo] = useState("")
+  const [parentCampaignId] = useState(initialValues?.parentCampaignId || "")
 
   // Fetch user's brands
   useEffect(() => {
@@ -124,6 +141,7 @@ export function BriefForm() {
           creativeDirection,
           referenceImageUrl,
           campaignProductInfo: campaignProductInfo || undefined,
+          parentCampaignId: parentCampaignId || undefined,
         }),
       })
 
