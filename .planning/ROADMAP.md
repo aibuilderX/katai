@@ -118,11 +118,13 @@ Plans:
   2. System tracks credit consumption per campaign and user can view credit balance and usage history
   3. System shows cost estimation before generation begins
   4. Compliance agent flags potential advertising law violations (Keihyouhou/Yakki Ho) and platform rule issues before delivery
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Schema extensions, Stripe client/config, tier definitions, credit operations, cost estimation
+- [ ] 06-02-PLAN.md — Stripe webhook handler, sync logic, checkout/portal/credits/estimate API routes
+- [ ] 06-03-PLAN.md — Compliance agent, advertising law prompts, compliance check API
+- [ ] 06-04-PLAN.md — Billing page UI, compliance panel, cost estimation dialog, credit gate, sidebar nav
 
 ## Progress
 
@@ -136,7 +138,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Multi-Platform Formatting & Delivery | 4/4 | Complete | 2026-02-08 |
 | 4. Video & Audio Pipeline | 3/3 | Complete | 2026-02-09 |
 | 5. Workflow & Intelligence | 3/3 | Complete | 2026-02-09 |
-| 6. Billing & Compliance | 0/2 | Not started | - |
+| 6. Billing & Compliance | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
