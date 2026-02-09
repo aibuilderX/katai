@@ -19,6 +19,8 @@ import { CampaignSidebar } from "@/components/campaign/campaign-sidebar"
 import { GenerationProgress } from "@/components/campaign/generation-progress"
 import { ApprovalPanel } from "@/components/campaign/approval-panel"
 import { ApprovalStatusBadge } from "@/components/campaign/approval-status-badge"
+import { QAReportPanel } from "@/components/campaign/qa-report-panel"
+import { TrendInsightsCard } from "@/components/campaign/trend-insights-card"
 import type { CampaignBrief, CampaignProgress } from "@/lib/db/schema"
 
 interface CampaignDetailContentProps {
@@ -304,6 +306,12 @@ export function CampaignDetailContent({
               approvalStatus={approvalStatus || "none"}
               userRole={userRole}
             />
+          )}
+          {(campaign.status === "complete" || campaign.status === "partial") && (
+            <QAReportPanel campaignId={campaign.id} />
+          )}
+          {(campaign.status === "complete" || campaign.status === "partial") && (
+            <TrendInsightsCard campaignId={campaign.id} />
           )}
           <CampaignSidebar
             brandName={brand?.name || "不明"}
