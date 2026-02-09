@@ -116,6 +116,9 @@ Recent decisions affecting current work:
 - [06-01]: Stripe singleton with descriptive error for missing env var
 - [06-03]: Compliance prompt covers Keihyouhou and Yakki Ho with specific article references and prohibited expressions in Japanese
 - [06-03]: Temperature 0 for deterministic compliance checking, mirroring QA agent pattern
+- [06-02]: Stripe v20 SDK adaptation: period dates from SubscriptionItem, invoice subscription from parent.subscription_details
+- [06-02]: Webhook returns 200 even on handler errors to prevent Stripe retry storms (errors logged for investigation)
+- [06-02]: Checkout route creates Stripe customer on-demand if not already mapped
 - [06-03]: Platform rule issues use platform field instead of category to distinguish from law-based issues
 
 ### Pending Todos
