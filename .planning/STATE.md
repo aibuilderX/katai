@@ -100,6 +100,12 @@ Recent decisions affecting current work:
 - [05-01]: Image regeneration cascades: delete composited + platform images, then re-run compositing and resize
 - [05-01]: Regenerate button positioned at top-right for copy variants, bottom-right for base images
 - [05-01]: Japanese cascade warning in image regeneration dialog
+- [05-02]: Campaign templates as typed constants (not DB) -- 4 templates sufficient for MVP, no CRUD overhead
+- [05-02]: BriefForm initialValues prop enables both template and clone pre-filling with same mechanism
+- [05-02]: Clone API returns brief data only; actual creation reuses existing POST /api/campaigns
+- [05-02]: QA agent temperature 0 for deterministic validation; trend agent temperature 0.3 for creative synthesis
+- [05-02]: Trend insights not persisted to DB (displayed on-demand, no storage overhead)
+- [05-02]: QA and trend endpoints bundled under /api/campaigns/[id]/qa (POST=QA, GET=trends)
 - [05-03]: Direct transition from revision_requested/rejected to pending_review on submit (skips intermediate draft for UX)
 - [05-03]: Approval panel shown only for complete/partial campaigns
 - [05-03]: History timeline collapsible by default to save sidebar space
