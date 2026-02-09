@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 6 in progress. Plans 01-03 complete. Continuing with Plan 04.
+**Current focus:** Phase 6 complete. All 4 plans complete. System ready for production deployment.
 
 ## Current Position
 
 Phase: 6 of 6 (Billing & Compliance)
-Plan: 3 of 4 in current phase
-Status: In Progress
-Last activity: 2026-02-09 -- Completed 06-03-PLAN.md
+Plan: 4 of 4 in current phase
+Status: Complete
+Last activity: 2026-02-09 -- Completed 06-04-PLAN.md
 
-Progress: [███████████████░░░░░] 75% (Phase 6: 3/4 plans)
+Progress: [████████████████████] 100% (Phase 6: 4/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: ~7 min
-- Total execution time: ~167 min
+- Total plans completed: 24
+- Average duration: ~21 min
+- Total execution time: ~513 min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████░░░░░] 75% (Ph
 | 3 | 4/4 | ~42 min | ~11 min |
 | 4 | 3/3 | ~15 min | ~5 min |
 | 5 | 3/3 | ~15 min | ~5 min |
-| 6 | 3/4 | ~8 min | ~3 min |
+| 6 | 4/4 | ~354 min | ~89 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01, 05-02, 05-03, 06-01, 06-03
-- Note: Phase 6 plan 03 at ~3min (fastest yet)
+- Last 5 plans: 05-02, 05-03, 06-01, 06-03, 06-04
+- Note: Phase 6 plan 04 at ~346min (longest plan, includes checkpoint pause + bug fix)
 
 *Updated after each plan completion*
 
@@ -120,6 +120,10 @@ Recent decisions affecting current work:
 - [06-02]: Webhook returns 200 even on handler errors to prevent Stripe retry storms (errors logged for investigation)
 - [06-02]: Checkout route creates Stripe customer on-demand if not already mapped
 - [06-03]: Platform rule issues use platform field instead of category to distinguish from law-based issues
+- [06-04]: Stripe client lazy initialization via Proxy pattern to prevent build-time crash when STRIPE_SECRET_KEY not set
+- [06-04]: Free tier shown as "現在のプラン" when no active subscription
+- [06-04]: Compliance panel only shown for complete/partial campaigns (same condition as QA and Approval panels)
+- [06-04]: Credit gate deducts before campaign creation (no rollback for MVP)
 
 ### Pending Todos
 
@@ -138,5 +142,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 06-03-PLAN.md. Compliance agent complete. Next: 06-04 (compliance UI/integration).
-Resume file: .planning/phases/06-billing-compliance/06-03-SUMMARY.md
+Stopped at: Completed 06-04-PLAN.md. Phase 6 complete. All phases complete. System ready for production deployment.
+Resume file: .planning/phases/06-billing-compliance/06-04-SUMMARY.md
