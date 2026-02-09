@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Core Pipeline** - Auth, dashboard, brand profiles, brief submission, Claude copy generation, Flux image generation, AI intelligence foundation
 - [x] **Phase 2: Japanese Text Compositing** - Server-side JP text overlay with kinsoku shori, keigo register control, brand kit compositing
 - [x] **Phase 3: Multi-Platform Formatting & Delivery** - 7 platform formats, platform-specific copy/sizing, campaign kit packaging, review grid, end-to-end orchestration
-- [ ] **Phase 4: Video & Audio Pipeline** - Kling video, Runway cinematic, ElevenLabs voiceover, HeyGen avatar, fallback routing, progressive generation UI
+- [x] **Phase 4: Video & Audio Pipeline** - Kling video, Runway cinematic, ElevenLabs voiceover, HeyGen avatar, fallback routing, progressive generation UI
 - [ ] **Phase 5: Workflow & Intelligence** - Selective regeneration, ringi approval, campaign history, brief templates, QA agent, Viral/Trend agent
 - [ ] **Phase 6: Billing & Compliance** - Stripe subscriptions, credit metering, usage dashboard, cost estimation, advertising law compliance
 
@@ -90,7 +90,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Provider client modules (Runway, ElevenLabs, Kling, HeyGen), type extensions, constants, provider health tracker
 - [x] 04-02-PLAN.md — Pipeline orchestration, webhook handler extension, Supabase Storage download, ZIP packager update
-- [ ] 04-03-PLAN.md — Progressive generation UI for video/audio stages, video player, video gallery tab
+- [x] 04-03-PLAN.md — Progressive generation UI for video/audio stages, video player, video gallery tab
 
 ### Phase 5: Workflow & Intelligence
 **Goal**: Agencies can iterate on campaigns with selective regeneration, formal approval workflows, templates, and AI-powered quality assurance
@@ -134,7 +134,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Foundation & Core Pipeline | 5/5 | Complete | 2026-02-07 |
 | 2. Japanese Text Compositing | 4/4 | Complete | 2026-02-08 |
 | 3. Multi-Platform Formatting & Delivery | 4/4 | Complete | 2026-02-08 |
-| 4. Video & Audio Pipeline | 2/3 | In progress | - |
+| 4. Video & Audio Pipeline | 3/3 | Complete | 2026-02-09 |
 | 5. Workflow & Intelligence | 0/3 | Not started | - |
 | 6. Billing & Compliance | 0/2 | Not started | - |
 
