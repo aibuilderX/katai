@@ -140,6 +140,15 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 5. Workflow & Intelligence | 3/3 | Complete | 2026-02-09 |
 | 6. Billing & Compliance | 4/4 | Complete | 2026-02-09 |
 
+### Phase 7: Infrastructure, Deployment & Production Setup
+
+**Goal:** [To be planned]
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
 ---
 *Roadmap created: 2026-02-06*
 *Last updated: 2026-02-09*

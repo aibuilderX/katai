@@ -125,6 +125,10 @@ Recent decisions affecting current work:
 - [06-04]: Compliance panel only shown for complete/partial campaigns (same condition as QA and Approval panels)
 - [06-04]: Credit gate deducts before campaign creation (no rollback for MVP)
 
+### Roadmap Evolution
+
+- Phase 7 added: Infrastructure, Deployment & Production Setup (Vercel deployment, Drizzle migrations, Supabase Storage buckets, env var configuration, smoke testing)
+
 ### Pending Todos
 
 - Run `ALTER TABLE campaigns REPLICA IDENTITY FULL;` for optimal Supabase Realtime (optional, polling works without it)
