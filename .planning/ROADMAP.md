@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Japanese Text Compositing** - Server-side JP text overlay with kinsoku shori, keigo register control, brand kit compositing
 - [x] **Phase 3: Multi-Platform Formatting & Delivery** - 7 platform formats, platform-specific copy/sizing, campaign kit packaging, review grid, end-to-end orchestration
 - [x] **Phase 4: Video & Audio Pipeline** - Kling video, Runway cinematic, ElevenLabs voiceover, HeyGen avatar, fallback routing, progressive generation UI
-- [ ] **Phase 5: Workflow & Intelligence** - Selective regeneration, ringi approval, campaign history, brief templates, QA agent, Viral/Trend agent
+- [x] **Phase 5: Workflow & Intelligence** - Selective regeneration, ringi approval, campaign history, brief templates, QA agent, Viral/Trend agent
 - [ ] **Phase 6: Billing & Compliance** - Stripe subscriptions, credit metering, usage dashboard, cost estimation, advertising law compliance
 
 ## Phase Details
@@ -105,9 +105,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Schema extensions, selective regeneration API and UI (copy + image with cascade)
-- [ ] 05-02-PLAN.md — Brief templates, campaign clone/re-run, QA agent, Trend agent
-- [ ] 05-03-PLAN.md — Ringi approval workflow (state machine, API, UI, campaign list badges)
+- [x] 05-01-PLAN.md — Schema extensions, selective regeneration API and UI (copy + image with cascade)
+- [x] 05-02-PLAN.md — Brief templates, campaign clone/re-run, QA agent, Trend agent
+- [x] 05-03-PLAN.md — Ringi approval workflow (state machine, API, UI, campaign list badges)
 
 ### Phase 6: Billing & Compliance
 **Goal**: Platform is monetizable with subscription tiers, credit-based metering, and advertising law compliance flagging
@@ -135,7 +135,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Japanese Text Compositing | 4/4 | Complete | 2026-02-08 |
 | 3. Multi-Platform Formatting & Delivery | 4/4 | Complete | 2026-02-08 |
 | 4. Video & Audio Pipeline | 3/3 | Complete | 2026-02-09 |
-| 5. Workflow & Intelligence | 0/3 | Not started | - |
+| 5. Workflow & Intelligence | 3/3 | Complete | 2026-02-09 |
 | 6. Billing & Compliance | 0/2 | Not started | - |
 
 ---
