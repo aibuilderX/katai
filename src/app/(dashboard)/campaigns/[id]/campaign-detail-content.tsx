@@ -5,12 +5,14 @@ import {
   ChevronRight,
   RefreshCw,
   AlertCircle,
+  Film,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CopyTab } from "@/components/campaign/copy-tab"
 import { ImageTab } from "@/components/campaign/image-tab"
 import { PlatformGridView } from "@/components/campaign/platform-grid-view"
+import { VideoTab } from "@/components/campaign/video-tab"
 import { DownloadButton } from "@/components/campaign/download-button"
 import { CampaignSidebar } from "@/components/campaign/campaign-sidebar"
 import { GenerationProgress } from "@/components/campaign/generation-progress"
@@ -100,6 +102,10 @@ export function CampaignDetailContent({
         day: "numeric",
       })
     : ""
+
+  // Filter video and audio assets for the video tab
+  const videoAssets = assets.filter((a) => a.type === "video")
+  const audioAssets = assets.filter((a) => a.type === "audio")
 
   // Show progress UI when generating
   if (campaign.status === "generating" || campaign.status === "pending") {
@@ -236,6 +242,18 @@ export function CampaignDetailContent({
               >
                 プラットフォーム
               </TabsTrigger>
+              <TabsTrigger
+                value="videos"
+                className="data-[state=active]:after:bg-warm-gold"
+              >
+                <Film className="mr-1 size-4" />
+                動画
+                {videoAssets.length > 0 && (
+                  <span className="ml-1 text-xs text-text-muted">
+                    ({videoAssets.length})
+                  </span>
+                )}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="copy">
@@ -252,6 +270,10 @@ export function CampaignDetailContent({
 
             <TabsContent value="platforms">
               <PlatformGridView assets={assets} copyVariants={copyVariants} />
+            </TabsContent>
+
+            <TabsContent value="videos">
+              <VideoTab videos={videoAssets} audioAssets={audioAssets} />
             </TabsContent>
           </Tabs>
         </div>
