@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 6 complete. All 4 plans complete. System ready for production deployment.
+**Current focus:** Phase 7 complete. All 7 phases done. Application deployed to production at katai-w65t.vercel.app.
 
 ## Current Position
 
-Phase: 6 of 6 (Billing & Compliance)
-Plan: 4 of 4 in current phase
+Phase: 7 of 7 (Infrastructure, Deployment & Production Setup)
+Plan: 3 of 3 in current phase
 Status: Complete
-Last activity: 2026-02-09 -- Completed 06-04-PLAN.md
+Last activity: 2026-02-09 -- Completed 07-03-PLAN.md. App live at katai-w65t.vercel.app.
 
-Progress: [████████████████████] 100% (Phase 6: 4/4 plans)
+Progress: [████████████████████] 100% (Phase 7: 3/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
-- Average duration: ~21 min
-- Total execution time: ~513 min
+- Total plans completed: 27
+- Average duration: ~20 min
+- Total execution time: ~544 min
 
 **By Phase:**
 
@@ -33,10 +33,10 @@ Progress: [████████████████████] 100% (P
 | 4 | 3/3 | ~15 min | ~5 min |
 | 5 | 3/3 | ~15 min | ~5 min |
 | 6 | 4/4 | ~354 min | ~89 min |
+| 7 | 3/3 | ~31 min | ~10 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02, 05-03, 06-01, 06-03, 06-04
-- Note: Phase 6 plan 04 at ~346min (longest plan, includes checkpoint pause + bug fix)
+- Last 5 plans: 06-03, 06-04, 07-01, 07-02, 07-03
 
 *Updated after each plan completion*
 
@@ -124,6 +124,11 @@ Recent decisions affecting current work:
 - [06-04]: Free tier shown as "現在のプラン" when no active subscription
 - [06-04]: Compliance panel only shown for complete/partial campaigns (same condition as QA and Approval panels)
 - [06-04]: Credit gate deducts before campaign creation (no rollback for MVP)
+- [07-01]: Single initial Drizzle migration covering all 14 tables (not incremental)
+- [07-02]: Route segment config exports for maxDuration (not vercel.json functions block)
+- [07-02]: DATABASE_URL default uses port 6543 (connection pooler) for production
+- [07-03]: Lazy Proxy init for admin Supabase client (same pattern as Stripe client)
+- [07-03]: Supabase infrastructure SQL applied directly via MCP during deployment
 
 ### Roadmap Evolution
 
@@ -131,13 +136,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Run `ALTER TABLE campaigns REPLICA IDENTITY FULL;` for optimal Supabase Realtime (optional, polling works without it)
-- Create `composited-images` bucket in Supabase Storage (public: true) for composited image uploads
-- Create `platform-images` bucket in Supabase Storage (public: true) for platform-resized images
-- Create `campaign-videos` bucket in Supabase Storage (public: true) for video asset storage
-- Create `campaign-audio` bucket in Supabase Storage (public: true) for audio asset storage
 - Complete 04-USER-SETUP.md: configure Runway, ElevenLabs, fal.ai, HeyGen API keys and voice/avatar selections
-- Configure Stripe: API keys, webhook secret, create 3 subscription products (Starter/Pro/Business) with JPY prices, enable Customer Portal
+- Add ANTHROPIC_API_KEY to Vercel env vars when available
+- Update Supabase Auth Site URL and Redirect URLs to production domain
+- Add custom domain to Vercel when ready
 
 ### Blockers/Concerns
 
@@ -146,5 +148,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 06-04-PLAN.md. Phase 6 complete. All phases complete. System ready for production deployment.
-Resume file: .planning/phases/06-billing-compliance/06-04-SUMMARY.md
+Stopped at: Phase 7 complete. All 7 phases done. App deployed at katai-w65t.vercel.app.
+Resume file: .planning/phases/07-infrastructure-deployment-production-setup/07-03-SUMMARY.md

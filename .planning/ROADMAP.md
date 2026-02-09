@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Video & Audio Pipeline** - Kling video, Runway cinematic, ElevenLabs voiceover, HeyGen avatar, fallback routing, progressive generation UI
 - [x] **Phase 5: Workflow & Intelligence** - Selective regeneration, ringi approval, campaign history, brief templates, QA agent, Viral/Trend agent
 - [x] **Phase 6: Billing & Compliance** - Stripe subscriptions, credit metering, usage dashboard, cost estimation, advertising law compliance
-- [ ] **Phase 7: Infrastructure, Deployment & Production Setup** - Drizzle migrations, Supabase infrastructure, Vercel deployment config, production hardening
+- [x] **Phase 7: Infrastructure, Deployment & Production Setup** - Drizzle migrations, Supabase infrastructure, Vercel deployment config, production hardening
 
 ## Phase Details
 
@@ -133,9 +133,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Drizzle migration generation and Supabase infrastructure SQL
-- [ ] 07-02-PLAN.md — Vercel deployment config, function timeouts, env var reference
-- [ ] 07-03-PLAN.md — Environment verification script and production deployment checkpoint
+- [x] 07-01-PLAN.md — Drizzle migration generation and Supabase infrastructure SQL
+- [x] 07-02-PLAN.md — Vercel deployment config, function timeouts, env var reference
+- [x] 07-03-PLAN.md — Environment verification script and production deployment checkpoint
 
 ## Progress
 
@@ -150,7 +150,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Video & Audio Pipeline | 3/3 | Complete | 2026-02-09 |
 | 5. Workflow & Intelligence | 3/3 | Complete | 2026-02-09 |
 | 6. Billing & Compliance | 4/4 | Complete | 2026-02-09 |
-| 7. Infrastructure & Deployment | 0/3 | In Progress | — |
+| 7. Infrastructure & Deployment | 3/3 | Complete | 2026-02-09 |
 
 ---
 *Roadmap created: 2026-02-06*
