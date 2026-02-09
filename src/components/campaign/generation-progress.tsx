@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, CheckCircle2, AlertCircle, RefreshCw, Sparkles } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, RefreshCw, Sparkles, MinusCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useCampaignProgress } from "@/hooks/use-campaign-progress"
@@ -38,7 +38,11 @@ export function GenerationProgress({
   const percentComplete = progress?.percentComplete ?? 0
   const copyStatus = progress?.copyStatus ?? "pending"
   const imageStatus = progress?.imageStatus ?? "pending"
+  const voiceoverStatus = progress?.voiceoverStatus
+  const videoStatus = progress?.videoStatus
+  const avatarStatus = progress?.avatarStatus
   const currentStep = progress?.currentStep ?? "準備中..."
+  const hasVideoStages = !!(voiceoverStatus || videoStatus || avatarStatus)
 
   // Auto-refresh page when generation completes to show results
   useEffect(() => {
@@ -59,6 +63,8 @@ export function GenerationProgress({
         return <Loader2 className="size-5 animate-spin text-vermillion" />
       case "failed":
         return <AlertCircle className="size-5 text-error" />
+      case "skipped":
+        return <MinusCircle className="size-5 text-text-muted" />
       default:
         return (
           <div className="size-5 rounded-full border-2 border-border bg-bg-surface" />
@@ -66,29 +72,72 @@ export function GenerationProgress({
     }
   }
 
-  function getStepLabel(type: "copy" | "image", stepStatus: string) {
-    if (type === "copy") {
-      switch (stepStatus) {
-        case "complete":
-          return "コピー生成完了"
-        case "generating":
-          return "コピー生成中..."
-        case "failed":
-          return "コピー生成失敗"
-        default:
-          return "コピー生成待ち"
-      }
-    }
+  type StepType = "copy" | "image" | "voiceover" | "video" | "avatar"
+
+  const stepLabels: Record<StepType, Record<string, string>> = {
+    copy: {
+      pending: "コピー生成待ち",
+      generating: "コピー生成中...",
+      complete: "コピー生成完了",
+      failed: "コピー生成失敗",
+    },
+    image: {
+      pending: "画像生成待ち",
+      generating: "画像生成中...",
+      complete: "画像生成完了",
+      failed: "画像生成失敗",
+    },
+    voiceover: {
+      pending: "ナレーション生成待ち",
+      generating: "ナレーション生成中...",
+      complete: "ナレーション生成完了",
+      failed: "ナレーション生成失敗",
+      skipped: "ナレーション（スキップ）",
+    },
+    video: {
+      pending: "動画生成待ち",
+      generating: "動画生成中...",
+      complete: "動画生成完了",
+      failed: "動画生成失敗",
+      skipped: "動画（スキップ）",
+    },
+    avatar: {
+      pending: "アバター動画待ち",
+      generating: "アバター動画生成中...",
+      complete: "アバター動画完了",
+      failed: "アバター動画失敗",
+      skipped: "アバター（スキップ）",
+    },
+  }
+
+  function getStepLabel(type: StepType, stepStatus: string) {
+    return stepLabels[type][stepStatus] || stepLabels[type].pending
+  }
+
+  function getStepTextClass(stepStatus: string) {
     switch (stepStatus) {
-      case "complete":
-        return "画像生成完了"
       case "generating":
-        return "画像生成中..."
+        return "font-medium text-text-primary"
+      case "complete":
+        return "text-success"
       case "failed":
-        return "画像生成失敗"
+        return "text-error"
+      case "skipped":
+        return "text-text-muted"
       default:
-        return "画像生成待ち"
+        return "text-text-muted"
     }
+  }
+
+  function renderStep(type: StepType, stepStatus: string) {
+    return (
+      <div className="flex items-center gap-3">
+        {getStepIcon(stepStatus)}
+        <span className={cn("text-sm", getStepTextClass(stepStatus))}>
+          {getStepLabel(type, stepStatus)}
+        </span>
+      </div>
+    )
   }
 
   // Failed state
@@ -158,40 +207,17 @@ export function GenerationProgress({
 
       {/* Step indicators */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          {getStepIcon(copyStatus)}
-          <span
-            className={cn(
-              "text-sm",
-              copyStatus === "generating"
-                ? "font-medium text-text-primary"
-                : copyStatus === "complete"
-                  ? "text-success"
-                  : copyStatus === "failed"
-                    ? "text-error"
-                    : "text-text-muted"
-            )}
-          >
-            {getStepLabel("copy", copyStatus)}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {getStepIcon(imageStatus)}
-          <span
-            className={cn(
-              "text-sm",
-              imageStatus === "generating"
-                ? "font-medium text-text-primary"
-                : imageStatus === "complete"
-                  ? "text-success"
-                  : imageStatus === "failed"
-                    ? "text-error"
-                    : "text-text-muted"
-            )}
-          >
-            {getStepLabel("image", imageStatus)}
-          </span>
-        </div>
+        {renderStep("copy", copyStatus)}
+        {renderStep("image", imageStatus)}
+
+        {/* Separator between static and video/audio stages */}
+        {hasVideoStages && (
+          <div className="my-2 border-t border-border-subtle" />
+        )}
+
+        {voiceoverStatus && renderStep("voiceover", voiceoverStatus)}
+        {videoStatus && renderStep("video", videoStatus)}
+        {avatarStatus && renderStep("avatar", avatarStatus)}
       </div>
 
       {/* Realtime indicator */}
