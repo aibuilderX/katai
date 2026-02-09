@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** Phase 5 in progress. Schema extended for approval/QA. Selective regeneration API live. Plans 02-03 remaining.
+**Current focus:** Phase 5 complete. All 3 plans executed (schema, templates/QA, approval workflow). Ready for Phase 6.
 
 ## Current Position
 
 Phase: 5 of 6 (Workflow & Intelligence)
-Plan: 1 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-09 -- Completed 05-01-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase Complete
+Last activity: 2026-02-09 -- Completed 05-03-PLAN.md
 
-Progress: [██████░░░░░░░░░░░░░░] 33% (Phase 5: 1/3 plans)
+Progress: [████████████████████] 100% (Phase 5: 3/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 20
 - Average duration: ~8 min
-- Total execution time: ~149 min
+- Total execution time: ~159 min
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [██████░░░░░░░░░░░░░░] 33% (Ph
 | 2 | 4/4 | ~18 min | ~5 min |
 | 3 | 4/4 | ~42 min | ~11 min |
 | 4 | 3/3 | ~15 min | ~5 min |
-| 5 | 1/3 | ~5 min | ~5 min |
+| 5 | 3/3 | ~15 min | ~5 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-04, 04-01, 04-02, 04-03, 05-01
-- Note: 05-01 completed in 5min (schema + regeneration API + UI)
+- Last 5 plans: 04-02, 04-03, 05-01, 05-02, 05-03
+- Note: Phase 5 all 3 plans at ~5min each (consistent velocity)
 
 *Updated after each plan completion*
 
@@ -100,6 +100,10 @@ Recent decisions affecting current work:
 - [05-01]: Image regeneration cascades: delete composited + platform images, then re-run compositing and resize
 - [05-01]: Regenerate button positioned at top-right for copy variants, bottom-right for base images
 - [05-01]: Japanese cascade warning in image regeneration dialog
+- [05-03]: Direct transition from revision_requested/rejected to pending_review on submit (skips intermediate draft for UX)
+- [05-03]: Approval panel shown only for complete/partial campaigns
+- [05-03]: History timeline collapsible by default to save sidebar space
+- [05-03]: GET endpoint on approve route for workflow + history retrieval with actor display names
 
 ### Pending Todos
 
@@ -117,5 +121,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-01-PLAN.md. Next: 05-02-PLAN.md (Approval Workflow).
-Resume file: .planning/phases/05-workflow-intelligence/05-01-SUMMARY.md
+Stopped at: Completed 05-03-PLAN.md. Phase 5 complete. Next: Phase 6.
+Resume file: .planning/phases/05-workflow-intelligence/05-03-SUMMARY.md
