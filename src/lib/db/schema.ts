@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   boolean,
+  integer,
 } from "drizzle-orm/pg-core"
 
 // ===== JSONB Type Interfaces =====
@@ -145,6 +146,9 @@ export const campaigns = pgTable("campaigns", {
   progress: jsonb("progress").$type<CampaignProgress>(),
   errorLog: jsonb("error_log").$type<ErrorEntry[]>(),
   thumbnailUrl: text("thumbnail_url"),
+  parentCampaignId: uuid("parent_campaign_id"),
+  templateId: text("template_id"),
+  approvalStatus: text("approval_status").default("none"), // 'none' | 'draft' | 'pending_review' | 'pending_approval' | 'approved' | 'rejected' | 'revision_requested'
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 })
@@ -185,5 +189,60 @@ export const assets = pgTable("assets", {
   modelUsed: text("model_used"), // e.g. 'flux-1.1-pro-ultra'
   prompt: text("prompt"), // The prompt used for generation
   metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * Approval workflows -- one workflow per campaign for review/approval tracking.
+ */
+export const approvalWorkflows = pgTable("approval_workflows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id)
+    .notNull()
+    .unique(),
+  status: text("status").notNull().default("draft"), // 'draft' | 'pending_review' | 'pending_approval' | 'approved' | 'rejected' | 'revision_requested'
+  submittedBy: uuid("submitted_by").references(() => profiles.id),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  reviewedBy: uuid("reviewed_by").references(() => profiles.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewComment: text("review_comment"),
+  approvedBy: uuid("approved_by").references(() => profiles.id),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvalComment: text("approval_comment"),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * Approval history -- audit log of all approval workflow state transitions.
+ */
+export const approvalHistory = pgTable("approval_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflowId: uuid("workflow_id")
+    .references(() => approvalWorkflows.id)
+    .notNull(),
+  action: text("action").notNull(), // 'submitted' | 'reviewed' | 'approved' | 'rejected' | 'revision_requested'
+  fromStatus: text("from_status").notNull(),
+  toStatus: text("to_status").notNull(),
+  actorId: uuid("actor_id")
+    .references(() => profiles.id)
+    .notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * QA reports -- automated quality assurance results per campaign.
+ */
+export const qaReports = pgTable("qa_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id)
+    .notNull(),
+  overallScore: integer("overall_score").notNull(), // 0-100
+  keigoResult: jsonb("keigo_result").notNull(), // { passed: boolean, issues: Array<{variantId, field, issue, severity, suggestion}> }
+  brandResult: jsonb("brand_result").notNull(), // { passed: boolean, issues: Array<{type, description, severity}> }
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
