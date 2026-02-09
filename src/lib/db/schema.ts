@@ -58,6 +58,16 @@ export interface ErrorEntry {
   details?: string
 }
 
+export interface ComplianceIssue {
+  category: string
+  field: string
+  problematicText: string
+  issue: string
+  severity: "error" | "warning"
+  suggestion: string
+  legalBasis: string
+}
+
 // ===== Tables =====
 
 /**
@@ -83,6 +93,7 @@ export const teams = pgTable("teams", {
   ownerId: uuid("owner_id")
     .references(() => profiles.id)
     .notNull(),
+  creditBalance: integer("credit_balance").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
 
@@ -244,5 +255,78 @@ export const qaReports = pgTable("qa_reports", {
   overallScore: integer("overall_score").notNull(), // 0-100
   keigoResult: jsonb("keigo_result").notNull(), // { passed: boolean, issues: Array<{variantId, field, issue, severity, suggestion}> }
   brandResult: jsonb("brand_result").notNull(), // { passed: boolean, issues: Array<{type, description, severity}> }
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+// ===== Billing & Compliance Tables =====
+
+/**
+ * Stripe customers -- maps users to Stripe customer IDs.
+ * One Stripe customer per user.
+ */
+export const stripeCustomers = pgTable("stripe_customers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => profiles.id)
+    .notNull()
+    .unique(),
+  stripeCustomerId: text("stripe_customer_id").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * Subscriptions -- one active subscription per team.
+ * Tracks Stripe subscription state and tier.
+ */
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id")
+    .references(() => teams.id)
+    .notNull()
+    .unique(),
+  stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
+  stripePriceId: text("stripe_price_id").notNull(),
+  tier: text("tier").notNull().default("free"), // 'free' | 'starter' | 'pro' | 'business'
+  status: text("status").notNull().default("active"), // 'trialing' | 'active' | 'canceled' | 'past_due' | 'incomplete'
+  currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * Credit ledger -- audit log of all credit transactions.
+ * Positive amounts = grants, negative = deductions.
+ */
+export const creditLedger = pgTable("credit_ledger", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teamId: uuid("team_id")
+    .references(() => teams.id)
+    .notNull(),
+  amount: integer("amount").notNull(), // positive = grant, negative = deduction
+  balanceAfter: integer("balance_after").notNull(),
+  type: text("type").notNull(), // 'grant' | 'deduction' | 'adjustment' | 'expiry'
+  campaignId: uuid("campaign_id").references(() => campaigns.id), // nullable -- only for deductions
+  description: text("description").notNull(),
+  stripeInvoiceId: text("stripe_invoice_id"), // nullable -- only for grants tied to payments
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * Compliance reports -- regulatory compliance check results per campaign.
+ * Covers Keihyouhou (景品表示法), Yakkihou (薬機法), and platform rules.
+ */
+export const complianceReports = pgTable("compliance_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id)
+    .notNull(),
+  overallRisk: text("overall_risk").notNull(), // 'low' | 'medium' | 'high'
+  keihyouhouResult: jsonb("keihyouhou_result").notNull().$type<ComplianceIssue[]>(),
+  yakkihoResult: jsonb("yakkiho_result").notNull().$type<ComplianceIssue[]>(),
+  platformRuleResult: jsonb("platform_rule_result").notNull().$type<ComplianceIssue[]>(),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+  acknowledgedBy: uuid("acknowledged_by").references(() => profiles.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
