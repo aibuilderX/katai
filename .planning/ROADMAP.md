@@ -102,12 +102,12 @@ Plans:
   3. User can view campaign history and re-run a previous campaign with modifications
   4. User can start a brief from pre-built templates for common JP campaign types (seasonal launch, flash sale, new product, brand awareness)
   5. QA agent validates output for keigo consistency, brand compliance, and visual coherence before delivery; Viral/Trend agent feeds trending insights into creative direction
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
-- [ ] 05-03: TBD
+- [ ] 05-01-PLAN.md — Schema extensions, selective regeneration API and UI (copy + image with cascade)
+- [ ] 05-02-PLAN.md — Brief templates, campaign clone/re-run, QA agent, Trend agent
+- [ ] 05-03-PLAN.md — Ringi approval workflow (state machine, API, UI, campaign list badges)
 
 ### Phase 6: Billing & Compliance
 **Goal**: Platform is monetizable with subscription tiers, credit-based metering, and advertising law compliance flagging
