@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Video & Audio Pipeline** - Kling video, Runway cinematic, ElevenLabs voiceover, HeyGen avatar, fallback routing, progressive generation UI
 - [x] **Phase 5: Workflow & Intelligence** - Selective regeneration, ringi approval, campaign history, brief templates, QA agent, Viral/Trend agent
 - [x] **Phase 6: Billing & Compliance** - Stripe subscriptions, credit metering, usage dashboard, cost estimation, advertising law compliance
+- [ ] **Phase 7: Infrastructure, Deployment & Production Setup** - Drizzle migrations, Supabase infrastructure, Vercel deployment config, production hardening
 
 ## Phase Details
 
@@ -126,10 +127,20 @@ Plans:
 - [x] 06-03-PLAN.md — Compliance agent, advertising law prompts, compliance check API
 - [x] 06-04-PLAN.md — Billing page UI, compliance panel, cost estimation dialog, credit gate, sidebar nav
 
+### Phase 7: Infrastructure, Deployment & Production Setup
+**Goal:** The fully-built application is deployed to Vercel production with correct database migrations, Supabase infrastructure, environment configuration, function timeouts, and verified end-to-end connectivity
+**Depends on:** Phase 6
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Drizzle migration generation and Supabase infrastructure SQL
+- [ ] 07-02-PLAN.md — Vercel deployment config, function timeouts, env var reference
+- [ ] 07-03-PLAN.md — Environment verification script and production deployment checkpoint
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -139,15 +150,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Video & Audio Pipeline | 3/3 | Complete | 2026-02-09 |
 | 5. Workflow & Intelligence | 3/3 | Complete | 2026-02-09 |
 | 6. Billing & Compliance | 4/4 | Complete | 2026-02-09 |
-
-### Phase 7: Infrastructure, Deployment & Production Setup
-
-**Goal:** [To be planned]
-**Depends on:** Phase 6
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+| 7. Infrastructure & Deployment | 0/3 | In Progress | — |
 
 ---
 *Roadmap created: 2026-02-06*
