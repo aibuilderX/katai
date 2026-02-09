@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Palette,
   Megaphone,
+  CreditCard,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ const navItems = [
   { key: "dashboard" as const, href: "/", icon: LayoutDashboard },
   { key: "brands" as const, href: "/brands", icon: Palette },
   { key: "campaigns" as const, href: "/campaigns", icon: Megaphone },
+  { key: "billing" as const, href: "/billing", icon: CreditCard },
   { key: "settings" as const, href: "/settings", icon: Settings },
 ]
 
