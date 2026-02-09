@@ -28,6 +28,7 @@ export default async function CampaignsPage() {
     id: string
     name: string | null
     status: string
+    approvalStatus: string | null
     thumbnailUrl: string | null
     createdAt: Date | null
     brief: { platforms?: string[] } | null
@@ -39,6 +40,7 @@ export default async function CampaignsPage() {
         id: campaigns.id,
         name: campaigns.name,
         status: campaigns.status,
+        approvalStatus: campaigns.approvalStatus,
         thumbnailUrl: campaigns.thumbnailUrl,
         createdAt: campaigns.createdAt,
         brief: campaigns.brief,
@@ -92,6 +94,7 @@ export default async function CampaignsPage() {
                 createdAt={
                   campaign.createdAt?.toISOString() || new Date().toISOString()
                 }
+                approvalStatus={campaign.approvalStatus}
               />
             )
           })}

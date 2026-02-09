@@ -25,9 +25,9 @@ export default async function CampaignDetailPage(
     redirect("/login")
   }
 
-  // Find user's team
+  // Find user's team and role
   const membership = await db
-    .select({ teamId: teamMembers.teamId })
+    .select({ teamId: teamMembers.teamId, role: teamMembers.role })
     .from(teamMembers)
     .where(eq(teamMembers.userId, user.id))
     .limit(1)
@@ -37,6 +37,7 @@ export default async function CampaignDetailPage(
   }
 
   const teamId = membership[0].teamId
+  const userRole = membership[0].role
 
   // Fetch campaign
   const campaignResult = await db
@@ -113,6 +114,8 @@ export default async function CampaignDetailPage(
       copyVariants={serializedVariants}
       assets={serializedAssets}
       generationTime={generationTime}
+      approvalStatus={campaign.approvalStatus || "none"}
+      userRole={userRole}
     />
   )
 }

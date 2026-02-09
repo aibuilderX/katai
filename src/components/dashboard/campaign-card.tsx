@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
+import { ApprovalStatusBadge } from "@/components/campaign/approval-status-badge"
 
 interface CampaignCardProps {
   id: string
@@ -9,6 +10,7 @@ interface CampaignCardProps {
   status: "pending" | "generating" | "complete" | "failed" | "partial" | "draft"
   platformCount: number
   createdAt: string
+  approvalStatus?: string | null
 }
 
 const statusConfig = {
@@ -36,6 +38,7 @@ export function CampaignCard({
   status,
   platformCount,
   createdAt,
+  approvalStatus,
 }: CampaignCardProps) {
   const t = useTranslations("campaign.status")
 
@@ -98,13 +101,14 @@ export function CampaignCard({
         <h3 className="truncate text-base font-bold text-text-primary">
           {name}
         </h3>
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-xs text-text-muted">{formattedDate}</span>
           {platformCount > 0 && (
             <span className="inline-flex items-center rounded-pill bg-warm-gold-subtle px-2 py-0.5 text-xs font-medium text-warm-gold">
               {platformCount} プラットフォーム
             </span>
           )}
+          <ApprovalStatusBadge status={approvalStatus} />
         </div>
       </div>
     </Link>

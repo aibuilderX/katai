@@ -17,6 +17,8 @@ import { VideoTab } from "@/components/campaign/video-tab"
 import { DownloadButton } from "@/components/campaign/download-button"
 import { CampaignSidebar } from "@/components/campaign/campaign-sidebar"
 import { GenerationProgress } from "@/components/campaign/generation-progress"
+import { ApprovalPanel } from "@/components/campaign/approval-panel"
+import { ApprovalStatusBadge } from "@/components/campaign/approval-status-badge"
 import type { CampaignBrief, CampaignProgress } from "@/lib/db/schema"
 
 interface CampaignDetailContentProps {
@@ -61,6 +63,8 @@ interface CampaignDetailContentProps {
     createdAt: string | null
   }[]
   generationTime: string | null
+  approvalStatus?: string
+  userRole?: string
 }
 
 const statusLabels: Record<string, { text: string; className: string }> = {
@@ -92,6 +96,8 @@ export function CampaignDetailContent({
   copyVariants,
   assets,
   generationTime,
+  approvalStatus,
+  userRole,
 }: CampaignDetailContentProps) {
   const brief = campaign.brief
   const statusInfo = statusLabels[campaign.status] || statusLabels.pending
@@ -196,6 +202,7 @@ export function CampaignDetailContent({
             >
               {statusInfo.text}
             </span>
+            <ApprovalStatusBadge status={approvalStatus} />
           </div>
           <div className="mt-1 flex items-center gap-3 text-sm text-text-muted">
             {brand && <span>{brand.name}</span>}
@@ -290,6 +297,13 @@ export function CampaignDetailContent({
         <div className="flex w-full shrink-0 flex-col gap-6 lg:w-[300px]">
           {(campaign.status === "complete" || campaign.status === "partial") && (
             <DownloadButton campaignId={campaign.id} />
+          )}
+          {(campaign.status === "complete" || campaign.status === "partial") && userRole && (
+            <ApprovalPanel
+              campaignId={campaign.id}
+              approvalStatus={approvalStatus || "none"}
+              userRole={userRole}
+            />
           )}
           <CampaignSidebar
             brandName={brand?.name || "不明"}
