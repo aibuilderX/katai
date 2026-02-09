@@ -1,5 +1,7 @@
 import Stripe from "stripe"
 import { NextResponse } from "next/server"
+
+export const maxDuration = 30
 import { stripe } from "@/lib/stripe/client"
 import {
   handleCheckoutComplete,

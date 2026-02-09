@@ -19,6 +19,8 @@
 
 import { NextResponse } from "next/server"
 import crypto from "crypto"
+
+export const maxDuration = 60
 import { db } from "@/lib/db"
 import { campaigns, copyVariants, assets, brandProfiles } from "@/lib/db/schema"
 import type { CampaignProgress } from "@/lib/db/schema"
