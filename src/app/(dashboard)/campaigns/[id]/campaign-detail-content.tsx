@@ -265,7 +265,7 @@ export function CampaignDetailContent({
             </TabsContent>
 
             <TabsContent value="images">
-              <ImageTab assets={assets} />
+              <ImageTab campaignId={campaign.id} assets={assets} />
             </TabsContent>
 
             <TabsContent value="platforms">

@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Download, ZoomIn, ImageIcon, X, Layers } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Download, ZoomIn, ImageIcon, X, Layers, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { RegenerateDialog } from "./regenerate-dialog"
 
 interface Asset {
   id: string
@@ -22,6 +25,7 @@ interface Asset {
 }
 
 interface ImageTabProps {
+  campaignId: string
   assets: Asset[]
 }
 
@@ -32,8 +36,44 @@ const LAYOUT_LABELS: Record<string, string> = {
   C: "レイアウト C",
 }
 
-export function ImageTab({ assets }: ImageTabProps) {
+export function ImageTab({ campaignId, assets }: ImageTabProps) {
+  const router = useRouter()
   const [lightboxImage, setLightboxImage] = useState<Asset | null>(null)
+  const [regenerateAssetId, setRegenerateAssetId] = useState<string | null>(
+    null
+  )
+  const [isRegenerating, setIsRegenerating] = useState(false)
+
+  async function handleRegenerateConfirm() {
+    if (!regenerateAssetId) return
+    setIsRegenerating(true)
+
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "image",
+          assetId: regenerateAssetId,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "再生成に失敗しました")
+      }
+
+      toast.success("画像を再生成しました")
+      setRegenerateAssetId(null)
+      router.refresh()
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "再生成に失敗しました"
+      )
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
 
   // Split assets by type
   const compositedImages = assets.filter((a) => a.type === "composited_image")
@@ -99,6 +139,17 @@ export function ImageTab({ assets }: ImageTabProps) {
                 {layoutLabel}
               </span>
             </div>
+          )}
+
+          {/* Regenerate button for base images */}
+          {asset.type === "image" && (
+            <button
+              onClick={() => setRegenerateAssetId(asset.id)}
+              className="absolute bottom-3 right-3 z-10 rounded-md bg-bg-card/80 p-2 text-text-muted backdrop-blur-sm transition-colors hover:bg-bg-hover hover:text-text-primary"
+              title="この画像を再生成"
+            >
+              <RefreshCw className="size-4" />
+            </button>
           )}
 
           {/* Hover overlay with actions */}
@@ -208,6 +259,16 @@ export function ImageTab({ assets }: ImageTabProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Regenerate confirmation dialog */}
+      <RegenerateDialog
+        open={!!regenerateAssetId}
+        onOpenChange={(open) => !open && setRegenerateAssetId(null)}
+        title="画像を再生成しますか？"
+        description="この画像を再生成すると、合成画像とリサイズ画像も更新されます。現在の画像は上書きされます。"
+        onConfirm={handleRegenerateConfirm}
+        isLoading={isRegenerating}
+      />
     </>
   )
 }

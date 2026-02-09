@@ -1,10 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, Type } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Eye, Type, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import { PlatformSelector } from "./platform-selector"
 import { VariantCard } from "./variant-card"
+import { RegenerateDialog } from "./regenerate-dialog"
 
 interface CopyVariant {
   id: string
@@ -26,14 +29,52 @@ interface CopyTabProps {
 }
 
 export function CopyTab({ campaignId, copyVariants, platforms }: CopyTabProps) {
+  const router = useRouter()
   const [selectedPlatform, setSelectedPlatform] = useState<string>(
     platforms[0] || ""
   )
   const [viewMode, setViewMode] = useState<"preview" | "text">("preview")
+  const [regenerateTarget, setRegenerateTarget] = useState<{
+    platform: string
+    variantLabel: string
+  } | null>(null)
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   const filteredVariants = copyVariants.filter(
     (v) => v.platform === selectedPlatform
   )
+
+  async function handleRegenerateConfirm() {
+    if (!regenerateTarget) return
+    setIsRegenerating(true)
+
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "copy_variant",
+          platform: regenerateTarget.platform,
+          variantLabel: regenerateTarget.variantLabel,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "再生成に失敗しました")
+      }
+
+      toast.success("コピーを再生成しました")
+      setRegenerateTarget(null)
+      router.refresh()
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "再生成に失敗しました"
+      )
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -78,19 +119,33 @@ export function CopyTab({ campaignId, copyVariants, platforms }: CopyTabProps) {
       {filteredVariants.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {filteredVariants.map((variant) => (
-            <VariantCard
-              key={variant.id}
-              id={variant.id}
-              campaignId={campaignId}
-              variantLabel={variant.variantLabel}
-              platform={variant.platform}
-              headline={variant.headline}
-              bodyText={variant.bodyText}
-              ctaText={variant.ctaText}
-              hashtags={variant.hashtags || []}
-              isFavorite={variant.isFavorite}
-              view={viewMode}
-            />
+            <div key={variant.id} className="relative">
+              {/* Regenerate button */}
+              <button
+                onClick={() =>
+                  setRegenerateTarget({
+                    platform: variant.platform,
+                    variantLabel: variant.variantLabel,
+                  })
+                }
+                className="absolute right-2 top-2 z-10 rounded-md bg-bg-card/90 p-1.5 text-text-muted backdrop-blur-sm transition-colors hover:bg-bg-hover hover:text-text-primary"
+                title="このバリエーションを再生成"
+              >
+                <RefreshCw className="size-3.5" />
+              </button>
+              <VariantCard
+                id={variant.id}
+                campaignId={campaignId}
+                variantLabel={variant.variantLabel}
+                platform={variant.platform}
+                headline={variant.headline}
+                bodyText={variant.bodyText}
+                ctaText={variant.ctaText}
+                hashtags={variant.hashtags || []}
+                isFavorite={variant.isFavorite}
+                view={viewMode}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -101,6 +156,20 @@ export function CopyTab({ campaignId, copyVariants, platforms }: CopyTabProps) {
           </p>
         </div>
       )}
+
+      {/* Regenerate confirmation dialog */}
+      <RegenerateDialog
+        open={!!regenerateTarget}
+        onOpenChange={(open) => !open && setRegenerateTarget(null)}
+        title="コピーを再生成しますか？"
+        description={
+          regenerateTarget
+            ? `${regenerateTarget.platform} の ${regenerateTarget.variantLabel} を新しいコピーで再生成します。現在のコピーは上書きされます。`
+            : ""
+        }
+        onConfirm={handleRegenerateConfirm}
+        isLoading={isRegenerating}
+      />
     </div>
   )
 }
