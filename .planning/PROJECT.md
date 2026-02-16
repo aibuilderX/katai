@@ -8,6 +8,22 @@ A SaaS platform that takes a campaign brief and generates a complete, platform-r
 
 A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy (keigo-aware, culturally appropriate) and platform-compliant assets — no design team required.
 
+## Current Milestone: v1.1 Full Pipeline + Auto Mode
+
+**Goal:** Transform AI Content Studio from a code-complete prototype into a working product with a real n8n 7-agent orchestration engine, all AI providers with intelligent routing, domain-agnostic campaign intelligence, and a solopreneur Auto mode front door.
+
+**Target features:**
+- Verify/fix v1.0 dashboard, auth, billing on Vercel (make existing app actually work)
+- Full n8n 7-agent pipeline (Orchestrator, Strategic Insight, Creative Director, Copywriter, Art Director, Localization, Media Intelligence)
+- All AI providers with intelligent routing: Flux 1.1 Pro Ultra (images), Seedance 2.0 + Kling 3.0 + Runway Gen-4 (video), ElevenLabs (voice), HeyGen (avatar)
+- Auto mode for solopreneurs (conversational brief builder, invisible strategic reasoning, 3-5 ready-to-post assets)
+- Three experience modes: Auto / Guided / Pro (same engine, different interface layers)
+- NotebookLM MCP knowledge base (5 themed notebooks: Frameworks, JP Market, Platform Specs, Copywriting, Per-client brand)
+- Domain-agnostic campaign intelligence (any industry via Schwartz/LF8/SB7/register classification)
+- Automated compliance screening (薬機法, 景品表示法, 食品表示法) with auto-rewrite
+- Brand Memory system (accumulates voice, visual style, preferences over campaigns)
+- Digital platforms: LINE, Instagram, TikTok, Twitter/X, Yahoo! JAPAN, Rakuten, Email
+
 ## Requirements
 
 ### Validated
@@ -35,12 +51,28 @@ A non-technical user submits a brief and receives a complete, download-ready cam
 
 ### Active
 
+- [ ] n8n 7-agent orchestration pipeline (Campaign Orchestrator, Strategic Insight, Creative Director, Copywriter, Art Director, Japanese Localization, Media Intelligence)
+- [ ] Seedance 2.0 video generation with native audio-visual co-generation and Japanese lip-sync
+- [ ] Intelligent video model routing (Seedance for social/audio, Runway for cinematic, Kling for prototyping)
+- [ ] Auto mode conversational brief builder (5 questions, <3 min, invisible strategic reasoning)
+- [ ] Three experience modes (Auto/Guided/Pro) sharing single 7-agent engine
+- [ ] NotebookLM MCP knowledge base with 5 themed notebooks
+- [ ] Domain-agnostic campaign intelligence via Schwartz/LF8/SB7/register classification
+- [ ] Automated compliance auto-rewrite (薬機法, 景品表示法, 食品表示法)
+- [ ] Brand Memory system (accumulates style, tone, preferences across campaigns)
+- [ ] v1.0 dashboard/auth/billing verification and fixes on Vercel
+
+### Future
+
 - [ ] RESTful API for headless campaign generation
 - [ ] Additional platform formats (GDN, YouTube, DOOH, In-Store POP)
 - [ ] Client presentation export (PDF/PPTX with mockup frames)
 - [ ] Vertical text (tategaki) layouts as first-class layout option
 - [ ] Performance prediction scoring
 - [ ] Regional dialect support (Kansai casual option)
+- [ ] Dual-audience pricing restructure (¥4,980 Start to ¥98,000 Agency)
+- [ ] Production RAG migration (Qdrant/Weaviate with Cohere embed-v3)
+- [ ] Physical outputs (CMYK POP, DOOH, print shelf talkers)
 
 ### Out of Scope
 
@@ -59,7 +91,9 @@ A non-technical user submits a brief and receives a complete, download-ready cam
 - **Market gap:** Western ad tools (Canva, Jasper) don't support Japanese ad platforms (LINE Rich Message, Yahoo! JAPAN Display Ads, Rakuten product listings) and produce poor Japanese typography
 - **Language moat:** Keigo register control, kinsoku shori line-break rules, tri-script mixing (hiragana/katakana/kanji) — this is the deepest competitive advantage
 - **AI landscape (2026):** 6 specialized AI providers each best-in-class for their domain — orchestration via n8n allows model swapping without pipeline restructure
-- **Target users:** JP agencies (5-50 staff), e-commerce merchants (Shopify JP, BASE, STORES.jp), in-house brand marketers
+- **Target users:** Dual-audience — (1) JP agencies (5-50 staff) and in-house brand marketers via Pro/Guided mode, (2) Japanese SMBs and solopreneurs (bakeries, salons, Rakuten merchants, freelancers) via Auto mode
+- **Dual-audience thesis:** Democratize advertising judgment, not just tools. Same 7-agent engine serves both audiences through different interface layers. Build for the solopreneur first (largest market, deepest underservice), layer agency controls on top
+- **Research corpus:** 9 research documents (~150 pages) covering agent architecture, prompt engineering, JP market intelligence, campaign kit deliverables, 4 scenario stress-tests, dual-audience strategy, and SaaS implementation blueprint
 - **Native JP speaker available** on team for copy QA and cultural review
 - **Existing infrastructure:** Self-hosted n8n on US VPS, additional VPS in Kuala Lumpur available
 - **v1.0 shipped:** 21,573 LOC TypeScript across 253 files. Next.js 16 + Tailwind v4 + Drizzle ORM + Supabase. Deployed at katai-w65t.vercel.app (Vercel Tokyo edge). 7 phases, 26 plans, 4 days (2026-02-06 → 2026-02-10).
@@ -94,5 +128,11 @@ A non-technical user submits a brief and receives a complete, download-ready cam
 | Lazy Proxy init for external clients | Stripe and Supabase admin clients crash at build time without env vars | ✓ Good — Vercel builds succeed without secrets |
 | Non-fatal downstream stages | Compositing/resize/video failures don't block campaign delivery | ✓ Good — campaigns complete with partial results |
 
+| Dual-audience model (Auto/Guided/Pro) | Democratize judgment, not tools; same engine, different wrappers; solopreneur-first is the largest market | — Pending |
+| NotebookLM MCP for prototype knowledge base | Fast setup, zero embedding infra, grounded citations; migrate to Qdrant from query logs | — Pending |
+| Seedance 2.0 as third video model | Native audio-visual co-gen, quad-modal refs, Japanese lip-sync, TikTok-trained motion DNA | — Pending |
+| Domain-agnostic via campaign intelligence | Agents classify Schwartz/LF8/SB7/register per brief; not locked to specific industries | — Pending |
+| Compliance auto-rewrite, not just flagging | Solopreneurs have no compliance team; system must fix, not flag | — Pending |
+
 ---
-*Last updated: 2026-02-10 after v1.0 milestone*
+*Last updated: 2026-02-16 after v1.1 milestone definition*

@@ -2,35 +2,24 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-10)
+See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** v1.0 MVP shipped. Planning next milestone.
+**Current focus:** v1.1 Full Pipeline + Auto Mode
 
 ## Current Position
 
-Milestone: v1.0 MVP — SHIPPED 2026-02-10
-Status: Complete
-Last activity: 2026-02-10 — Milestone v1.0 archived. App live at katai-w65t.vercel.app.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-16 — Milestone v1.1 started
 
 ## Performance Metrics
 
-**Velocity:**
+**v1.0 Velocity (archived):**
 - Total plans completed: 26
 - Average duration: ~20 min
 - Total execution time: ~544 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 5/5 | ~69 min | ~14 min |
-| 2 | 4/4 | ~18 min | ~5 min |
-| 3 | 4/4 | ~42 min | ~11 min |
-| 4 | 3/3 | ~15 min | ~5 min |
-| 5 | 3/3 | ~15 min | ~5 min |
-| 6 | 4/4 | ~354 min | ~89 min |
-| 7 | 3/3 | ~31 min | ~10 min |
 
 ## Accumulated Context
 
@@ -49,9 +38,3 @@ Full decision history archived in phase SUMMARY.md files.
 ### Blockers/Concerns
 
 None.
-
-## Session Continuity
-
-Last session: 2026-02-10
-Stopped at: v1.0 milestone archived. Ready for next milestone.
-Resume with: /gsd:new-milestone
