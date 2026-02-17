@@ -14,6 +14,8 @@ import { eq, desc, and } from "drizzle-orm"
 import crypto from "crypto"
 import { deductCredits } from "@/lib/billing/credits"
 import { estimateCampaignCost } from "@/lib/billing/estimate"
+import type { N8nWebhookPayload } from "@/types/pipeline"
+import { PIPELINE_MILESTONES } from "@/types/pipeline"
 
 export async function GET() {
   const supabase = await createClient()
@@ -200,8 +202,8 @@ export async function POST(request: Request) {
   const n8nWebhookSecret = process.env.N8N_WEBHOOK_SECRET
 
   if (n8nWebhookUrl && n8nWebhookSecret) {
-    // Trigger n8n webhook with HMAC-SHA256 signed payload
-    const payload = JSON.stringify({
+    // Build v1.1 webhook payload with expanded fields
+    const webhookPayload: N8nWebhookPayload = {
       campaignId: campaign.id,
       brief,
       brandProfile: {
@@ -218,7 +220,20 @@ export async function POST(request: Request) {
         targetMarket: brandProfile.targetMarket,
         brandValues: brandProfile.brandValues,
       },
-    })
+      // v1.1 expanded fields
+      mode: "pro",                    // Default to 'pro' until Auto mode (Phase 10)
+      brandMemory: null,              // null until Phase 11 populates
+      agentConfig: {
+        strategicInsight: { model: process.env.AGENT_STRATEGIC_INSIGHT_MODEL || "claude-opus-4-6" },
+        creativeDirector: { model: process.env.AGENT_CREATIVE_DIRECTOR_MODEL || "claude-opus-4-6" },
+        copywriter: { model: process.env.AGENT_COPYWRITER_MODEL || "claude-opus-4-6" },
+        artDirector: { model: process.env.AGENT_ART_DIRECTOR_MODEL || "claude-opus-4-6" },
+        jpLocalization: { model: process.env.AGENT_JP_LOCALIZATION_MODEL || "claude-opus-4-6" },
+      },
+      pipelineVersion: "v1.1",
+    }
+
+    const payload = JSON.stringify(webhookPayload)
 
     const signature = crypto
       .createHmac("sha256", n8nWebhookSecret)
@@ -235,7 +250,7 @@ export async function POST(request: Request) {
         body: payload,
       })
 
-      // Update status to generating
+      // Update status to generating with v1.1 milestone initialization
       await db
         .update(campaigns)
         .set({
@@ -246,6 +261,13 @@ export async function POST(request: Request) {
             imageStatus: "generating",
             percentComplete: 10,
             currentStep: "AI生成パイプラインを開始しました",
+            // v1.1 milestone initialization
+            pipelineVersion: "v1.1",
+            milestones: PIPELINE_MILESTONES.map(m => ({
+              id: m.id,
+              label: m.label,
+              status: "pending" as const,
+            })),
           },
         })
         .where(eq(campaigns.id, campaign.id))

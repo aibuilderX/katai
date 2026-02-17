@@ -22,10 +22,11 @@ import crypto from "crypto"
 
 export const maxDuration = 60
 import { db } from "@/lib/db"
-import { campaigns, copyVariants, assets, brandProfiles } from "@/lib/db/schema"
+import { campaigns, copyVariants, assets, brandProfiles, campaignCosts } from "@/lib/db/schema"
 import type { CampaignProgress } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import { adminClient } from "@/lib/supabase/admin"
+import type { N8nCallbackPayload, CostEntry } from "@/types/pipeline"
 
 interface CopyVariantPayload {
   platform: string
@@ -54,15 +55,26 @@ interface AudioAssetPayload {
   voiceId: string
 }
 
+/**
+ * Combined payload type supporting both v1.0 and v1.1 callback shapes.
+ * v1.0 fields preserved for backward compatibility.
+ * v1.1 fields (milestone, costEntries, agentError, pipelineState) are additive.
+ */
 interface N8nWebhookPayload {
   campaignId: string
-  status: "success" | "failure"
+  status: "success" | "failure" | "progress" | "partial"
+  pipelineVersion?: "v1.0" | "v1.1"
   copyVariants?: CopyVariantPayload[]
   imageUrls?: string[]
   videoAssets?: VideoAssetPayload[]
   audioAssets?: AudioAssetPayload[]
   stage?: "copy" | "image" | "voiceover" | "video" | "avatar" | "complete"
   error?: string
+  // v1.1 fields
+  milestone?: N8nCallbackPayload["milestone"]
+  pipelineState?: N8nCallbackPayload["pipelineState"]
+  costEntries?: CostEntry[]
+  agentError?: N8nCallbackPayload["agentError"]
 }
 
 /**
@@ -444,6 +456,75 @@ export async function POST(request: Request) {
           progress: { ...existing, ...stageUpdate } as CampaignProgress,
         })
         .where(eq(campaigns.id, campaignId))
+    }
+
+    // Handle v1.1 milestone progress updates
+    if (payload.milestone) {
+      const currentCampaign = await db
+        .select({ progress: campaigns.progress })
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId))
+        .limit(1)
+
+      const existingProgress = (currentCampaign[0]?.progress ?? {}) as CampaignProgress
+      const milestones = existingProgress.milestones || []
+
+      // Update the specific milestone
+      const updatedMilestones = milestones.map(m =>
+        m.id === payload.milestone!.id ? { ...m, ...payload.milestone } : m
+      )
+
+      await db
+        .update(campaigns)
+        .set({
+          progress: {
+            ...existingProgress,
+            milestones: updatedMilestones,
+          } as CampaignProgress,
+        })
+        .where(eq(campaigns.id, campaignId))
+    }
+
+    // Persist cost entries (ORCH-15)
+    if (payload.costEntries && payload.costEntries.length > 0) {
+      for (const entry of payload.costEntries) {
+        await db.insert(campaignCosts).values({
+          campaignId,
+          entryType: entry.entryType,
+          agentName: entry.agentName,
+          modelUsed: entry.modelUsed,
+          inputTokens: entry.inputTokens,
+          outputTokens: entry.outputTokens,
+          providerName: entry.providerName,
+          operationType: entry.operationType,
+          durationMs: entry.durationMs,
+          costYen: entry.costYen?.toString(),   // Drizzle numeric expects string input
+          success: entry.success,
+          errorMessage: entry.errorMessage,
+          metadata: entry.metadata,
+        })
+      }
+
+      // Check cost alert threshold
+      const COST_ALERT_THRESHOLD_YEN = parseInt(
+        process.env.CAMPAIGN_COST_ALERT_THRESHOLD_YEN || "5000",
+        10
+      )
+
+      const costResult = await db
+        .select({
+          totalCost: sql<string>`SUM(${campaignCosts.costYen})`,
+        })
+        .from(campaignCosts)
+        .where(eq(campaignCosts.campaignId, campaignId))
+
+      const totalCost = parseFloat(costResult[0]?.totalCost || "0")
+      if (totalCost > COST_ALERT_THRESHOLD_YEN) {
+        console.warn(
+          `[COST ALERT] Campaign ${campaignId} cost \u00a5${totalCost.toFixed(2)} ` +
+          `exceeds threshold \u00a5${COST_ALERT_THRESHOLD_YEN}`
+        )
+      }
     }
 
     // Update campaign status to complete
