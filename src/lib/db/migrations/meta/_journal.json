@@ -8,6 +8,13 @@
       "when": 1770653068465,
       "tag": "0000_initial-schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771366168664,
+      "tag": "0001_add-brand-memory-campaign-costs",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   jsonb,
   boolean,
   integer,
+  numeric,
 } from "drizzle-orm/pg-core"
 
 // ===== JSONB Type Interfaces =====
@@ -49,6 +50,9 @@ export interface CampaignProgress {
   avatarStatus?: "pending" | "generating" | "complete" | "failed" | "skipped"
   percentComplete: number
   currentStep: string
+  // v1.1 milestone-based progress (optional -- only present for v1.1 pipeline)
+  milestones?: import("@/types/pipeline").PipelineMilestone[]
+  pipelineVersion?: "v1.0" | "v1.1"
 }
 
 export interface ErrorEntry {
@@ -328,5 +332,67 @@ export const complianceReports = pgTable("compliance_reports", {
   platformRuleResult: jsonb("platform_rule_result").notNull().$type<ComplianceIssue[]>(),
   acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
   acknowledgedBy: uuid("acknowledged_by").references(() => profiles.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+// ===== v1.1 Pipeline Tables =====
+
+/**
+ * Brand memory -- accumulated voice and style signals per brand profile.
+ * Populated in Phase 11, schema created now.
+ * Each row = one brand profile's accumulated learning.
+ */
+export const brandMemory = pgTable("brand_memory", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  brandProfileId: uuid("brand_profile_id")
+    .references(() => brandProfiles.id)
+    .notNull(),
+  teamId: uuid("team_id")
+    .references(() => teams.id)
+    .notNull(),
+  signals: jsonb("signals").$type<import("@/types/pipeline").BrandMemorySignal[]>().default([]),
+  voiceSummary: jsonb("voice_summary").$type<import("@/types/pipeline").BrandVoiceSummary>(),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+})
+
+/**
+ * Per-campaign cost tracking.
+ * Each row = one agent call or one provider API call within a campaign.
+ * Campaign total = SUM of all rows for that campaign.
+ *
+ * User decisions:
+ * - Per-agent token usage AND per-provider API cost logged separately
+ * - Data per agent call: agent name, model used, input tokens, output tokens, cost in yen
+ * - Data per provider call: provider name, operation type, cost in yen, duration
+ * - Campaign total aggregated from subtotals
+ * - Configurable cost alert threshold via CAMPAIGN_COST_ALERT_THRESHOLD_YEN env var
+ *
+ * NOTE: Drizzle `numeric()` returns strings in TypeScript. This is correct behavior.
+ * Consumers must use `parseFloat()` when reading costYen for arithmetic/comparisons.
+ */
+export const campaignCosts = pgTable("campaign_costs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id)
+    .notNull(),
+  entryType: text("entry_type").notNull(),      // 'agent' | 'provider'
+  // Agent-specific fields
+  agentName: text("agent_name"),                // 'strategic_insight' | 'creative_director' | 'copywriter' | 'art_director' | 'jp_localization'
+  modelUsed: text("model_used"),                // 'claude-opus-4-6' | 'claude-sonnet-4-5'
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  // Provider-specific fields
+  providerName: text("provider_name"),          // 'flux' | 'kling' | 'runway' | 'elevenlabs' | 'heygen'
+  operationType: text("operation_type"),        // 'image_generation' | 'video_generation' | 'voice_synthesis' | 'avatar_generation'
+  durationMs: integer("duration_ms"),
+  // Cost (shared) -- numeric returns string in TypeScript, use parseFloat() for arithmetic
+  costYen: numeric("cost_yen", { precision: 10, scale: 4 }),
+  // Status
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  // Metadata
+  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })

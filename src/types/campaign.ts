@@ -14,6 +14,8 @@ export interface CampaignBrief {
   campaignProductInfo?: string
 }
 
+import type { PipelineMilestone } from "@/types/pipeline"
+
 /**
  * Real-time progress tracking for campaign generation.
  */
@@ -29,6 +31,9 @@ export interface CampaignProgress {
   avatarStatus?: "pending" | "generating" | "complete" | "failed" | "skipped"
   percentComplete: number
   currentStep: string
+  // v1.1 milestone-based progress (optional -- only present for v1.1 pipeline)
+  milestones?: PipelineMilestone[]
+  pipelineVersion?: "v1.0" | "v1.1"
 }
 
 /**
