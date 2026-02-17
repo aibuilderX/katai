@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 8 of 12 (Infrastructure + Schema Foundation)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — Phase 8 context gathered (progress, failure handling, cost tracking, model assignment)
+Plan: 2 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-18 — Completed 08-02 (schema + pipeline types, webhook/callback v1.1 expansion)
 
-Progress: [████████░░░░░░░░░░░░] 40% (v1.0 complete, v1.1 not started)
+Progress: [████████░░░░░░░░░░░░] 42% (v1.0 complete, v1.1 Phase 8 in progress)
 
 ## Performance Metrics
 
@@ -24,9 +24,14 @@ Progress: [████████░░░░░░░░░░░░] 40% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 2
+- Average duration: ~6 min
+- Total execution time: ~12 min
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 08    | 01   | ~6 min   | 1     | 1     |
+| 08    | 02   | 6 min    | 2     | 6     |
 
 ## Accumulated Context
 
@@ -38,6 +43,13 @@ Key v1.1 decisions pending execution:
 - NotebookLM MCP: feature-flagged, graceful degradation required, Gemini fallback planned
 - Seedance 2.0: feature-flagged behind SEEDANCE_PROVIDER, pipeline must work without it
 - Compliance auto-rewrite: "flag + human confirm" — never auto-certify (legal liability)
+
+Key v1.1 decisions executed (Phase 8):
+- All agents default to claude-opus-4-6, configurable via AGENT_*_MODEL env vars
+- Pipeline mode defaults to "pro" until Auto mode (Phase 10)
+- Cost alert threshold: 5000 yen default via CAMPAIGN_COST_ALERT_THRESHOLD_YEN
+- 4 milestones with Japanese labels: strategy/content/assets/packaging
+- brandMemory null until Phase 11 populates
 
 ### Pending Todos
 
@@ -58,5 +70,5 @@ Key v1.1 decisions pending execution:
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-infrastructure-schema-foundation/08-CONTEXT.md
+Stopped at: Completed 08-02-PLAN.md
+Resume file: .planning/phases/08-infrastructure-schema-foundation/08-03-PLAN.md
