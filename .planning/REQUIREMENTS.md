@@ -133,73 +133,75 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ORCH-01 | — | Pending |
-| ORCH-02 | — | Pending |
-| ORCH-03 | — | Pending |
-| ORCH-04 | — | Pending |
-| ORCH-05 | — | Pending |
-| ORCH-06 | — | Pending |
-| ORCH-07 | — | Pending |
-| ORCH-08 | — | Pending |
-| ORCH-09 | — | Pending |
-| ORCH-10 | — | Pending |
-| ORCH-11 | — | Pending |
-| ORCH-12 | — | Pending |
-| ORCH-13 | — | Pending |
-| ORCH-14 | — | Pending |
-| ORCH-15 | — | Pending |
-| GENX-01 | — | Pending |
-| GENX-02 | — | Pending |
-| GENX-03 | — | Pending |
-| GENX-04 | — | Pending |
-| GENX-05 | — | Pending |
-| GENX-06 | — | Pending |
-| GENX-07 | — | Pending |
-| GENX-08 | — | Pending |
-| GENX-09 | — | Pending |
-| AUTO-01 | — | Pending |
-| AUTO-02 | — | Pending |
-| AUTO-03 | — | Pending |
-| AUTO-04 | — | Pending |
-| AUTO-05 | — | Pending |
-| AUTO-06 | — | Pending |
-| AUTO-07 | — | Pending |
-| AUTO-08 | — | Pending |
-| AUTO-09 | — | Pending |
-| AUTO-10 | — | Pending |
-| AUTO-11 | — | Pending |
-| BRND-01 | — | Pending |
-| BRND-02 | — | Pending |
-| BRND-03 | — | Pending |
-| BRND-04 | — | Pending |
-| BRND-05 | — | Pending |
-| BRND-06 | — | Pending |
-| BRND-07 | — | Pending |
-| COMP-01 | — | Pending |
-| COMP-02 | — | Pending |
-| COMP-03 | — | Pending |
-| COMP-04 | — | Pending |
-| COMP-05 | — | Pending |
-| COMP-06 | — | Pending |
-| COMP-07 | — | Pending |
-| COMP-08 | — | Pending |
-| VIDM-01 | — | Pending |
-| VIDM-02 | — | Pending |
-| VIDM-03 | — | Pending |
-| KBAS-01 | — | Pending |
-| KBAS-02 | — | Pending |
-| KBAS-03 | — | Pending |
-| KBAS-04 | — | Pending |
-| FIXV-01 | — | Pending |
-| FIXV-02 | — | Pending |
-| FIXV-03 | — | Pending |
-| FIXV-04 | — | Pending |
+| ORCH-01 | Phase 8 | Pending |
+| ORCH-02 | Phase 9 | Pending |
+| ORCH-03 | Phase 8 | Pending |
+| ORCH-04 | Phase 9 | Pending |
+| ORCH-05 | Phase 9 | Pending |
+| ORCH-06 | Phase 9 | Pending |
+| ORCH-07 | Phase 9 | Pending |
+| ORCH-08 | Phase 9 | Pending |
+| ORCH-09 | Phase 9 | Pending |
+| ORCH-10 | Phase 8 | Pending |
+| ORCH-11 | Phase 8 | Pending |
+| ORCH-12 | Phase 8 | Pending |
+| ORCH-13 | Phase 8 | Pending |
+| ORCH-14 | Phase 8 | Pending |
+| ORCH-15 | Phase 8 | Pending |
+| GENX-01 | Phase 9 | Pending |
+| GENX-02 | Phase 9 | Pending |
+| GENX-03 | Phase 9 | Pending |
+| GENX-04 | Phase 9 | Pending |
+| GENX-05 | Phase 9 | Pending |
+| GENX-06 | Phase 9 | Pending |
+| GENX-07 | Phase 9 | Pending |
+| GENX-08 | Phase 9 | Pending |
+| GENX-09 | Phase 9 | Pending |
+| AUTO-01 | Phase 10 | Pending |
+| AUTO-02 | Phase 10 | Pending |
+| AUTO-03 | Phase 10 | Pending |
+| AUTO-04 | Phase 10 | Pending |
+| AUTO-05 | Phase 10 | Pending |
+| AUTO-06 | Phase 10 | Pending |
+| AUTO-07 | Phase 10 | Pending |
+| AUTO-08 | Phase 10 | Pending |
+| AUTO-09 | Phase 10 | Pending |
+| AUTO-10 | Phase 10 | Pending |
+| AUTO-11 | Phase 10 | Pending |
+| BRND-01 | Phase 11 | Pending |
+| BRND-02 | Phase 11 | Pending |
+| BRND-03 | Phase 11 | Pending |
+| BRND-04 | Phase 11 | Pending |
+| BRND-05 | Phase 11 | Pending |
+| BRND-06 | Phase 11 | Pending |
+| BRND-07 | Phase 11 | Pending |
+| COMP-01 | Phase 12 | Pending |
+| COMP-02 | Phase 12 | Pending |
+| COMP-03 | Phase 12 | Pending |
+| COMP-04 | Phase 12 | Pending |
+| COMP-05 | Phase 12 | Pending |
+| COMP-06 | Phase 12 | Pending |
+| COMP-07 | Phase 12 | Pending |
+| COMP-08 | Phase 12 | Pending |
+| VIDM-01 | Phase 12 | Pending |
+| VIDM-02 | Phase 12 | Pending |
+| VIDM-03 | Phase 12 | Pending |
+| KBAS-01 | Phase 11 | Pending |
+| KBAS-02 | Phase 11 | Pending |
+| KBAS-03 | Phase 11 | Pending |
+| KBAS-04 | Phase 11 | Pending |
+| FIXV-01 | Phase 8 | Pending |
+| FIXV-02 | Phase 8 | Pending |
+| FIXV-03 | Phase 8 | Pending |
+| FIXV-04 | Phase 8 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 56 total
-- Mapped to phases: 0
-- Unmapped: 56 (pending roadmap creation)
+- v1.1 requirements: 61 total (15 ORCH + 9 GENX + 11 AUTO + 7 BRND + 8 COMP + 3 VIDM + 4 KBAS + 4 FIXV)
+- Mapped to phases: 61
+- Unmapped: 0
+
+Note: REQUIREMENTS.md stated "56 total" but enumeration yields 61. All requirements are mapped regardless.
 
 ---
 *Requirements defined: 2026-02-17*
-*Last updated: 2026-02-17 after initial definition*
+*Last updated: 2026-02-17 after v1.1 roadmap creation — traceability complete*
