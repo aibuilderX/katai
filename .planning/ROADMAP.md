@@ -53,12 +53,12 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 4. New database tables (brand_memory, campaign_costs) exist in Supabase with Drizzle schema applied and the expanded webhook payload shape is accepted by the n8n endpoint
 5. Direct generation fallback logs a deprecation warning when it activates
 
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 08-01: n8n 2.x upgrade, AI Agent node validation, and environment variable configuration
-- [ ] 08-02: Database schema additions (brand_memory, campaign_costs tables) and expanded webhook payload
-- [ ] 08-03: v1.0 production verification (dashboard, auth, billing, ZIP download, AI provider live calls) and deprecation marking of runDirectGeneration
+- [ ] 08-01-PLAN.md — n8n 2.x upgrade to 2.9.0, AI Agent node validation, workflow publishing, and agent model env var documentation
+- [ ] 08-02-PLAN.md — Database schema additions (brand_memory, campaign_costs), PipelineState types, milestone progress types, and expanded webhook payload/callback handler
+- [ ] 08-03-PLAN.md — v1.0 production verification (dashboard, auth, billing, ZIP download, AI providers) and runDirectGeneration deprecation marking
 
 ---
 
@@ -168,7 +168,7 @@ Plans:
 | 5. Workflow & Intelligence | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 6. Billing & Compliance | v1.0 | 4/4 | Complete | 2026-02-09 |
 | 7. Infrastructure & Deployment | v1.0 | 3/3 | Complete | 2026-02-09 |
-| 8. Infrastructure + Schema Foundation | v1.1 | 0/3 | Not started | - |
+| 8. Infrastructure + Schema Foundation | v1.1 | 0/3 | Planned | - |
 | 9. Core Agent Pipeline + Generation Execution | v1.1 | 0/5 | Not started | - |
 | 10. Auto Mode | v1.1 | 0/3 | Not started | - |
 | 11. Brand Memory + Knowledge Base | v1.1 | 0/3 | Not started | - |
@@ -176,4 +176,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-17 after v1.1 milestone roadmap definition*
+*Last updated: 2026-02-18 after Phase 8 planning*
