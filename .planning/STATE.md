@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 Phase: 8 of 12 (Infrastructure + Schema Foundation)
 Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-18 — Completed 08-02 (schema + pipeline types, webhook/callback v1.1 expansion)
+Last activity: 2026-02-18 — Completed 08-01 (n8n 2.x confirmed, agent pipeline env vars documented)
 
 Progress: [████████░░░░░░░░░░░░] 42% (v1.0 complete, v1.1 Phase 8 in progress)
 
@@ -50,6 +50,7 @@ Key v1.1 decisions executed (Phase 8):
 - Cost alert threshold: 5000 yen default via CAMPAIGN_COST_ALERT_THRESHOLD_YEN
 - 4 milestones with Japanese labels: strategy/content/assets/packaging
 - brandMemory null until Phase 11 populates
+- n8n upgrade was no-op: VPS already running 2.x with AI Agent nodes available
 
 ### Pending Todos
 
@@ -70,5 +71,5 @@ Key v1.1 decisions executed (Phase 8):
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 08-02-PLAN.md
+Stopped at: Completed 08-01-PLAN.md (08-01 and 08-02 both done, 08-03 remaining)
 Resume file: .planning/phases/08-infrastructure-schema-foundation/08-03-PLAN.md
