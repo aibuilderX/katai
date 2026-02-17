@@ -1,723 +1,664 @@
-# Technology Stack
+# Technology Stack -- v1.1 Additions
 
-**Project:** AI Content Studio
-**Researched:** 2026-02-06
-**Research mode:** Ecosystem (Stack dimension)
-**Overall confidence:** MEDIUM — Based on training data (cutoff May 2025). Versions should be verified against npm/official docs before `package.json` creation. Core architectural recommendations are HIGH confidence; specific version pins are MEDIUM.
+**Project:** AI Content Studio v1.1 (Full Pipeline + Auto Mode)
+**Researched:** 2026-02-16
+**Research mode:** Ecosystem (Stack dimension, subsequent milestone)
+**Overall confidence:** MEDIUM-HIGH
+
+**Scope:** This document covers ONLY the new stack additions for v1.1. The existing validated stack (Next.js 16, Tailwind v4, Drizzle ORM 0.45, Supabase, Stripe, fal.ai, Kling, Runway, ElevenLabs, HeyGen, BudouX, Sharp, Zustand, TanStack Query) is NOT re-documented here.
 
 ---
 
-## Recommended Stack
+## 1. n8n 7-Agent Pipeline Stack
 
-### Core Framework — Next.js on Vercel
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Next.js | ^15.x (verify latest) | Full-stack framework | App Router with RSC for dashboard; API Routes for webhook handlers; Edge Runtime for Tokyo-edge SSR; built-in image optimization; i18n routing for ja locale | HIGH |
-| React | ^19.x | UI layer | Required by Next.js 15; Server Components reduce client JS bundle; concurrent features for complex dashboard grids | HIGH |
-| TypeScript | ^5.6+ | Type safety | Essential for complex multi-provider API response types; campaign schema validation; prevents runtime errors across 6 AI provider integrations | HIGH |
-| Vercel | Platform | Hosting & deployment | Tokyo edge CDN (hnd1 region); zero-config Next.js deployment; preview deploys for staging; built-in analytics; serverless functions for webhooks | HIGH |
-
-**Why Next.js over alternatives:**
-- **Not Remix:** Vercel-native deployment is zero-friction; Remix's streaming strengths matter less for a dashboard app where most data is fetched server-side
-- **Not Nuxt/SvelteKit:** React ecosystem has deeper Japanese community support, more UI component libraries with JP locale support
-- **Not plain React SPA:** Need server-side API routes for n8n webhooks, SSR for initial dashboard load speed, and Edge Runtime for Tokyo-region server rendering
-
-**App Router (not Pages Router):** The project is greenfield. App Router is the current standard. Server Components significantly reduce client bundle for a dashboard that's mostly data display. Layouts give natural dashboard shell structure.
-
-### Database — Supabase PostgreSQL (Tokyo Region)
+### n8n Version Upgrade
 
 | Technology | Version | Purpose | Why | Confidence |
 |------------|---------|---------|-----|------------|
-| Supabase | Platform | Managed PostgreSQL + Auth + Storage | Tokyo region (ap-northeast-1); built-in Row Level Security; real-time subscriptions for campaign progress updates; Auth with email/password + social; Storage for temporary asset staging | HIGH |
-| PostgreSQL | 15+ (Supabase managed) | Primary database | JSONB for flexible campaign briefs and AI response caching; strong typing for billing records; mature full-text search for campaign history | HIGH |
-| @supabase/supabase-js | ^2.x (verify latest) | Client SDK | Type-safe queries; real-time subscriptions; auth helpers for Next.js | MEDIUM |
-| Drizzle ORM | ^0.34+ (verify latest) | Type-safe SQL | Lightweight, SQL-first ORM; excellent TypeScript inference; no heavy abstraction layer; works alongside direct Supabase client for real-time features | MEDIUM |
+| n8n | 2.x stable (currently ~2.8) | Orchestration platform upgrade | n8n 2.0 released Dec 2025, now the only supported line (1.x EOL March 2026). Draft/Publish workflow management prevents accidental production changes during iterative agent development. Task Runners enabled by default for secure code execution. | HIGH |
 
-**Why Supabase over Neon:**
-- **Auth included:** Supabase Auth eliminates a separate auth service (no need for NextAuth/Clerk). Supports email/password, Google, and magic link flows out of the box
-- **Real-time built-in:** Campaign generation progress (6 AI providers completing in parallel) naturally maps to Supabase real-time subscriptions. The dashboard can show live progress without polling
-- **Storage included:** Supabase Storage in Tokyo region provides S3-compatible storage for temporary asset staging before final delivery, avoiding a separate storage service setup
-- **Row Level Security:** Multi-tenant SaaS data isolation via RLS policies, not application-layer filtering — more secure by default
+**Action required:** Upgrade self-hosted n8n from 1.x to 2.x. This is a hardening release, not a feature release -- migration is straightforward. The existing webhook trigger and HTTP Request patterns are unchanged.
 
-**Why not Neon:**
-- Neon is excellent for pure PostgreSQL, but this project benefits from Supabase's integrated platform (Auth + Storage + Real-time). Neon would require adding separate services for each of those, increasing operational complexity
-- Neon's serverless branching is nice but not critical for this use case
+**Key 2.0 changes affecting this project:**
+- Draft/Publish model: Save edits without affecting production workflows. Essential for iterating on 7 agent sub-workflows without breaking active campaigns.
+- Task Runners: All JavaScript Code nodes now execute in isolated environments. Security improvement for running prompt assembly code.
+- Credential API: New PATCH endpoint for updating credentials by ID -- useful for API key rotation.
+- 1.x support ended March 2026. No security patches after that.
 
-**Why Drizzle ORM over Prisma:**
-- **Lighter runtime:** Drizzle has no query engine binary; Prisma's engine adds ~10MB+ to serverless functions and increases cold starts on Vercel
-- **SQL-first:** Drizzle generates SQL that looks like SQL. For complex campaign queries (JOIN across users, campaigns, assets, billing), this is more predictable
-- **Edge compatible:** Drizzle works in Vercel Edge Runtime; Prisma historically had Edge compatibility issues (Prisma Accelerate required)
-- **Not Prisma:** Prisma's cold start penalty in serverless and its abstraction overhead are not justified here. Drizzle gives type safety without the weight
+### n8n AI Agent Node Architecture
 
-### Object Storage — S3-Compatible (Tokyo Region)
+| Technology | Node Type | Purpose | Why | Confidence |
+|------------|-----------|---------|-----|------------|
+| AI Agent (Tools Agent) | Root node | Core agent reasoning loop per sub-workflow | LangChain-powered reasoning. The Tools Agent variant is correct for this use case because each specialized agent needs to call specific tools (HTTP requests, vector search, workflow calls). | HIGH |
+| Anthropic Chat Model | Sub-node | LLM connection for agents | Connects the AI Agent node to Claude. Supports claude-sonnet-4-5, claude-opus-4-6. Configure model per agent: Opus for Strategic Insight + Localization (complex reasoning), Sonnet for Copywriter + Art Director (faster, sufficient quality). | HIGH |
+| Call n8n Workflow Tool | Sub-node | Sub-workflow delegation | Allows the master orchestrator agent to call specialized agent sub-workflows as tools. Each sub-workflow has its own AI Agent node with a focused system prompt and tool set. Define input/output schemas in the Execute Sub-workflow trigger node. | HIGH |
+| AI Agent Tool | Sub-node | Agent-as-tool nesting | Allows the orchestrator to call another AI Agent directly as a tool, without a separate sub-workflow. Use for lightweight agents (e.g., QA validation pass). For the 7 specialized agents, prefer sub-workflows for isolation and reusability. | HIGH |
+| MCP Client Tool | Sub-node | NotebookLM knowledge access | Connects n8n AI Agent nodes to external MCP servers (NotebookLM) via SSE or streamable HTTP transport. Supports Bearer auth. This is how agents query the research knowledge base at runtime. | HIGH |
+| HTTP Request | Standard node | API calls to AI providers | Used within sub-workflows for non-LLM calls: Flux image gen, Seedance video gen, ElevenLabs TTS, HeyGen avatar. Same pattern as v1.0. | HIGH |
+| Execute Sub-workflow | Standard node | Deterministic sub-workflow calls | For non-agent sub-workflows (compositing, platform resize, asset packaging). Unlike AI Agent Tool/Call n8n Workflow Tool, this is direct invocation without LLM reasoning. | HIGH |
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Supabase Storage | Included | Temporary asset staging | Same platform; simple API; Tokyo region; RLS-protected buckets; presigned URLs for secure downloads | HIGH |
-| Cloudflare R2 | Service | Primary asset delivery + long-term storage | Zero egress fees (critical for SaaS with large media files); S3-compatible API; global CDN; Workers for signed URL generation | HIGH |
-| @aws-sdk/client-s3 | ^3.x | S3-compatible client | Works with both Supabase Storage and R2; presigned URL generation; multipart uploads for large video files | HIGH |
+### Multi-Agent Orchestration Pattern
 
-**Storage architecture recommendation:**
-1. **Supabase Storage** — Temporary staging. n8n uploads AI-generated assets here during generation. Dashboard reads from here for preview
-2. **Cloudflare R2** — Long-term storage + delivery. After campaign approval, assets are moved to R2. Campaign kit ZIP downloads served from R2. Zero egress fees prevent cost explosion as user base grows
+**Architecture: Orchestrator + 7 Sub-Workflow Agents**
 
-**Why R2 over AWS S3:**
-- **Zero egress:** A campaign kit with 20+ assets (images, videos, audio) could be 500MB+. At scale, S3 egress ($0.09/GB) would dominate hosting costs. R2 has zero egress fees
-- **S3-compatible:** Same SDK, same presigned URL patterns, drop-in replacement
-- **R2 has Tokyo PoP:** Content is served from Tokyo edge, matching latency requirements
-
-**Why not Supabase Storage alone:**
-- Supabase Storage is great for auth-gated temporary files but lacks R2's egress-free economics for public/shared delivery at scale. Use both.
-
-### Authentication
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Supabase Auth | Included | User authentication | Bundled with Supabase; email/password + Google OAuth; JWT-based sessions; middleware integration for Next.js; RLS policies use auth.uid() | HIGH |
-| @supabase/ssr | ^0.5+ | Next.js auth helpers | Server-side auth in App Router; cookie-based session management; middleware protection for routes | MEDIUM |
-
-**Why not NextAuth (Auth.js) or Clerk:**
-- **Supabase Auth is free and bundled:** No separate service, no additional API calls, no per-MAU pricing (Clerk charges per MAU)
-- **RLS integration:** Supabase Auth JWTs automatically work with Row Level Security policies — the database enforces data isolation, not just the application layer
-- **Simpler stack:** One less service to manage. Auth, database, storage, and real-time all from one platform
-
-### Billing — Stripe Hybrid Model
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Stripe | API v2024+ | Payment processing | Industry standard; supports Japanese market (JPY); subscription + metered billing in one platform; Stripe Tax for JP consumption tax | HIGH |
-| stripe (Node SDK) | ^17.x (verify) | Server-side SDK | Webhook handling; subscription management; usage record reporting | MEDIUM |
-| @stripe/stripe-js | ^4.x (verify) | Client SDK | Checkout Session redirect; Payment Element for card collection; secure tokenization | MEDIUM |
-
-**Billing architecture — Hybrid model:**
+The master workflow uses the **Orchestrator pattern** -- a primary AI Agent that delegates to specialized agents via Call n8n Workflow Tool nodes. Each specialized agent is a separate n8n workflow with its own AI Agent node, system prompt, and tools.
 
 ```
-Subscription Tiers (monthly, JPY):
-  Starter:  Y9,800/mo  — 50 credits/mo, 3 platforms
-  Business: Y29,800/mo — 200 credits/mo, all platforms
-  Agency:   Y98,000/mo — 1000 credits/mo, all platforms, API access, priority queue
-
-Credit Top-Ups (on-demand, JPY):
-  10 credits:  Y2,980
-  50 credits:  Y12,800
-  200 credits: Y44,800
-
-Credit Costs Per Generation:
-  Image (single):     1 credit
-  Copy (full set):    1 credit
-  Video (15s):        3 credits
-  Video (30s):        5 credits
-  Avatar video:       5 credits
-  Cinematic video:    8 credits
-  Full campaign kit:  ~15-25 credits (varies by platforms selected)
-```
-
-**Stripe implementation pattern:**
-1. **Stripe Subscriptions** with `metered` billing items for credit usage
-2. **Stripe Checkout** for subscription sign-up and credit top-up purchases
-3. **Stripe Webhooks** to Next.js API route for subscription lifecycle events
-4. **Usage Records API** — After each generation, report credit consumption to Stripe
-5. **Stripe Customer Portal** for self-service plan changes and payment method updates
-6. **Stripe Tax** for automatic JP consumption tax (10%) calculation
-
-**Why not LemonSqueezy or Paddle:**
-- Stripe has native JPY support with Japanese payment methods (konbini, bank transfer)
-- Stripe's metered billing API is mature; LemonSqueezy and Paddle lack equivalent metered usage reporting
-- Stripe Tax handles JP consumption tax automatically
-
-### AI Orchestration — n8n (Self-Hosted)
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| n8n | Latest stable (self-hosted) | AI workflow orchestration | Visual workflow builder; parallel branch execution; error handling per branch; HTTP Request node for all AI APIs; webhook triggers from Next.js; credential management for 6 API keys | HIGH |
-| Docker + Docker Compose | Latest | n8n deployment | Reproducible deployment; easy upgrades; volume mounts for persistence | HIGH |
-
-**n8n Workflow Patterns for AI Orchestration:**
-
-#### Pattern 1: Webhook-Triggered Campaign Generation
-
-```
-Next.js API Route
+Master Orchestrator Workflow (Webhook Trigger)
   |
   v
-n8n Webhook Node (receives campaign brief JSON)
+AI Agent (Orchestrator) -- claude-opus-4-6
+  |
+  |-- Tool: "strategic_insight_agent" (Call n8n Workflow)
+  |-- Tool: "creative_director_agent" (Call n8n Workflow)
+  |-- Tool: "copywriter_agent" (Call n8n Workflow)
+  |-- Tool: "localization_agent" (Call n8n Workflow)
+  |-- Tool: "art_director_agent" (Call n8n Workflow)
+  |-- Tool: "media_intelligence_agent" (Call n8n Workflow)
+  |-- Tool: "notebooklm_knowledge_query" (MCP Client Tool)
+  |-- Tool: "update_campaign_progress" (HTTP Request to Next.js)
   |
   v
-Set Node (normalize brief, extract parameters)
+Respond to Webhook (return execution ID)
+```
+
+Each sub-workflow agent:
+```
+Execute Sub-workflow Trigger (input schema defined)
   |
   v
-Split In Batches / Parallel Branches (fan-out)
-  |
-  +---> Branch 1: Claude API (copy generation)
-  |       |-> HTTP Request to Anthropic API
-  |       |-> Parse response, extract copy variants
-  |
-  +---> Branch 2: Flux 1.1 Pro Ultra (image generation)
-  |       |-> HTTP Request to Flux API (replicate/bfl)
-  |       |-> Poll for completion (Wait + HTTP loop)
-  |       |-> Download generated images
-  |
-  +---> Branch 3: ElevenLabs (TTS generation)
-  |       |-> Depends on Branch 1 (needs copy text)
-  |       |-> HTTP Request to ElevenLabs API
-  |       |-> Download audio files
-  |
-  +---> Branch 4: Kling 3.0 (video generation)
-  |       |-> Depends on Branch 2 (needs base images)
-  |       |-> HTTP Request to Kling API
-  |       |-> Poll for completion
-  |
-  +---> Branch 5: HeyGen (avatar video)
-  |       |-> Depends on Branch 1 + Branch 3 (needs script + audio)
-  |       |-> HTTP Request to HeyGen API
-  |       |-> Poll for completion
-  |
-  +---> Branch 6: Runway Gen-4 (cinematic video)
-  |       |-> Depends on Branch 2 (needs base images)
-  |       |-> HTTP Request to Runway API
-  |       |-> Poll for completion
+AI Agent (Specialized) -- model varies per agent
+  |-- Tool: MCP Client (NotebookLM knowledge access)
+  |-- Tool: HTTP Request (provider API calls, if needed)
+  |-- Tool: Code (data transformation, prompt assembly)
   |
   v
-Merge Node (wait for all branches)
-  |
-  v
-HTTP Request (callback to Next.js with results)
-  |
-  v
-Supabase Node (update campaign status)
+Return structured output to parent
 ```
 
-#### Pattern 2: Dependency-Aware Parallel Execution
+**Agent-to-Model mapping:**
 
-The 6 AI providers have dependencies:
-```
-Phase 1 (parallel, no deps):
-  - Claude (copy) --------+
-  - Flux (images) --------+---> ~10-30s each
+| Agent | Model | Temperature | Rationale |
+|-------|-------|-------------|-----------|
+| Orchestrator | claude-opus-4-6 | 0.1 | Routing decisions require highest reasoning |
+| Strategic Insight | claude-opus-4-6 | 0.3 | Complex strategic analysis, persona creation |
+| Creative Director | claude-opus-4-6 | 0.2 | Quality evaluation, holistic review |
+| Copywriter | claude-sonnet-4-5 | 0.7 | Creative text generation, higher temp for variety |
+| JP Localization | claude-opus-4-6 | 0.1 | Keigo accuracy requires precision, not creativity |
+| Art Director | claude-sonnet-4-5 | 0.4 | Prompt engineering for image/video generation |
+| Media Intelligence | claude-sonnet-4-5 | 0.2 | Platform specs are factual, low creativity needed |
 
-Phase 2 (parallel, depends on Phase 1):
-  - ElevenLabs (TTS) <--- needs Claude copy
-  - Kling (video) <------ needs Flux images
-  - Runway (cinematic) <- needs Flux images
+**Why this pattern over alternatives:**
+- **Not routing pattern (text classifier + switch):** The 7-agent pipeline has dynamic dependencies (Localization reviews Copywriter output and may request rewrites). An orchestrator agent can reason about the review loop. A static router cannot.
+- **Not flat parallel branches:** v1.0 used flat parallel branches with Merge nodes. This works for independent API calls but cannot handle the inter-agent critique loops (Creative Director reviewing all outputs, Localization sending copy back to Copywriter).
+- **Not single monolithic agent:** One agent with 7 roles would have a 30,000+ token system prompt and degrade in quality. Specialized sub-workflows keep each agent focused.
 
-Phase 3 (depends on Phase 1 + 2):
-  - HeyGen (avatar) <---- needs Claude script + ElevenLabs audio
+### n8n Streaming and Progress Updates
 
-Phase 4 (compositing, depends on all):
-  - JP text overlay <---- needs Flux images + Claude copy
-  - Asset packaging
-```
+| Technology | Feature | Purpose | Confidence |
+|------------|---------|---------|------------|
+| n8n Webhook Streaming (SSE) | Response mode: Streaming | Stream real-time execution progress back to the Next.js app as the workflow runs. Agent tool-call-start/tool-call-end events, node-execute-before/after events. | MEDIUM |
+| Respond to Webhook (Streaming) | Enable Streaming option | Alternative to SSE -- stream partial results back as nodes complete. Requires trigger configured with Response mode "Streaming". | MEDIUM |
 
-**n8n implementation:** Use the **Merge** node in "Wait for All" mode between phases. Phase 1 branches run in parallel. Merge collects results. Phase 2 branches fan out with Phase 1 data. This gives maximum parallelism while respecting dependencies.
+**Recommendation:** For v1.1, continue using the existing webhook callback pattern (n8n fires HTTP POST to `/api/webhooks/n8n` after each stage) rather than adopting SSE streaming. Reasons:
+1. The callback pattern is already built and proven in v1.0.
+2. SSE streaming from n8n is a newer feature with community reports of edge cases.
+3. The stage-based progress updates (copy done, images done, video done) provide sufficient granularity.
+4. Supabase real-time subscriptions already push progress to the dashboard.
 
-#### Pattern 3: Polling for Async AI APIs
+**Deferred to v1.2:** Evaluate SSE streaming for finer-grained agent progress (showing "Strategic Insight Agent is analyzing brief..." vs "Copywriter Agent is generating LINE variants...").
 
-Most AI APIs (Flux, Kling, Runway, HeyGen) are async — you submit a job and poll for results.
+### n8n Environment Updates
 
-```
-HTTP Request (submit generation job)
-  |
-  v
-Wait Node (30 seconds)
-  |
-  v
-HTTP Request (check job status)
-  |
-  v
-IF Node (status === "completed"?)
-  |
-  YES --> Continue to next step
-  NO --> Loop back to Wait Node (with max retries)
-```
+| Setting | Value | Change from v1.0 | Reason |
+|---------|-------|-------------------|--------|
+| `N8N_AI_ENABLED` | true | New | Enable AI Agent nodes (disabled by default in n8n 2.0) |
+| `EXECUTIONS_TIMEOUT` | 900 (15 min) | Up from 600 | 7-agent pipeline with critique loops takes longer than direct API calls |
+| `EXECUTIONS_TIMEOUT_MAX` | 1200 (20 min) | Up from 900 | Hard ceiling for complex campaigns with video generation |
+| `N8N_CONCURRENCY_PRODUCTION_LIMIT` | 3 | Down from 5 | Each 7-agent execution uses more memory than flat parallel branches |
 
-**n8n-specific tips:**
-- Use the **Wait** node (not JavaScript setTimeout) for polling delays
-- Set **max retries** (e.g., 20 iterations x 30s = 10 min max wait) to prevent infinite loops
-- Use **Error Trigger** workflow to handle API failures gracefully
-- Store intermediate results in Supabase via the **Supabase** node after each AI provider completes, so the dashboard can show progressive updates
+---
 
-#### Pattern 4: Fallback Routing
+## 2. Seedance 2.0 Video Generation
 
-```
-HTTP Request (primary provider)
-  |
-  v
-IF Node (error or timeout?)
-  |
-  YES --> HTTP Request (fallback provider)
-  NO --> Continue with primary result
-```
+### Provider Strategy
 
-Configure per-provider fallbacks:
-- Flux -> DALL-E 3 (fallback image gen)
-- Kling -> Runway (fallback video gen)
-- ElevenLabs -> OpenAI TTS (fallback voice)
-- Claude -> GPT-4o (fallback copy, but loses keigo specialization)
+Seedance 2.0 (ByteDance) launched February 2026. The official BytePlus API was expected around February 24, 2026. At time of research (Feb 16, 2026), the official API is not yet publicly available. Third-party aggregators provide access now.
 
-#### Pattern 5: Progress Reporting via Webhooks
+**Phased integration approach:**
 
-After each AI provider completes, fire a webhook back to Next.js:
+| Phase | Provider | Endpoint Pattern | When |
+|-------|----------|-----------------|------|
+| Phase A (now) | fal.ai | `queue.fal.run/fal-ai/bytedance/seedance/...` | fal.ai is already used for Kling; same auth pattern (FAL_KEY), same async queue API |
+| Phase B (fallback) | WaveSpeedAI or Atlas Cloud | Unified REST API with Bearer token | If fal.ai does not carry Seedance 2.0, or for pricing advantage |
+| Phase C (target) | BytePlus (official) | Volcengine ModelArk REST API | When official API stabilizes; switch via config flag |
 
-```
-[AI Provider completes]
-  |
-  v
-HTTP Request Node (POST to Next.js /api/campaigns/[id]/progress)
-  Body: { provider: "flux", status: "completed", assetUrl: "..." }
-  |
-  v
-Next.js API Route --> Supabase update --> Real-time subscription fires --> Dashboard updates
-```
+**Recommendation: Start with fal.ai** because:
+1. The project already has `FAL_KEY` configured and the Kling client (`src/lib/ai/kling.ts`) uses the exact same fal.ai queue pattern (submit -> poll -> retrieve).
+2. fal.ai is positioned as an early Seedance 2.0 provider.
+3. Zero new credentials needed. Zero new SDK dependencies.
+4. The adapter can be switched to official BytePlus API later with a config flag.
 
-This gives users live progress: "Copy: Done, Images: Done, Video: Generating (45%)..."
+### Seedance 2.0 Client Implementation
 
-### Image Processing — Server-Side Compositing Pipeline
+| Technology | What | Purpose | Confidence |
+|------------|------|---------|------------|
+| fal.ai Queue API | HTTP REST | Submit/poll/retrieve pattern identical to existing Kling client | HIGH |
+| No new npm package | -- | fal.ai is called via raw fetch (same as kling.ts); no SDK needed | HIGH |
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Sharp | ^0.33+ (verify latest) | Image manipulation | Fastest Node.js image library (libvips-based); resize, composite, format conversion; SVG overlay support for text compositing; AVIF/WebP output | HIGH |
-| @resvg/resvg-js | ^2.6+ | SVG to raster | Renders SVG (with embedded fonts) to PNG for compositing with Sharp; handles complex text layout SVGs; Rust-based, fast | HIGH |
-| opentype.js | ^1.3+ | Font metrics | Parses OTF/TTF fonts for precise text measurement; needed for kinsoku shori line-break calculations; glyph-level metrics for kerning | HIGH |
-| Satori | ^0.12+ (verify) | HTML/CSS to SVG | Vercel's library for generating SVG from JSX; used by next/og; handles font embedding; good for structured text layouts | MEDIUM |
-| Noto Sans JP | Font files | Japanese typography | Google's open-source JP font; full kanji coverage; multiple weights (Regular, Medium, Bold); variable font available | HIGH |
-| M PLUS Rounded 1c | Font files | Secondary JP font | Rounded, friendly aesthetic for casual campaigns; open source; full JP coverage | HIGH |
+**New file: `src/lib/ai/seedance.ts`**
 
-**Japanese Text Compositing Pipeline:**
-
-This is the most technically complex part of the stack. AI models (Flux, DALL-E, etc.) cannot reliably render Japanese text. The hybrid approach is:
-
-1. **AI generates base image** (no text, or text removed/ignored)
-2. **Server-side compositing** adds Japanese text with correct typography
-
-```
-Step 1: Text Layout Calculation
-  - Input: copy text (JP), font, size, area dimensions, layout mode (horizontal/vertical)
-  - opentype.js parses font, gets glyph metrics
-  - Apply kinsoku shori rules (line-break prohibitions)
-  - Calculate line breaks, character positions
-  - Handle tate-chu-yoko (horizontal numbers in vertical text)
-  - Output: positioned glyph array with (x, y, char) for each character
-
-Step 2: SVG Generation
-  - Build SVG with positioned <text> elements
-  - Embed font as base64 in SVG (for resvg-js to render correctly)
-  - Apply text styling (color, stroke, shadow, outline)
-  - Handle furigana (ruby text) positioning if needed
-
-Step 3: SVG to Raster
-  - resvg-js renders SVG to PNG with alpha channel
-  - High-DPI rendering (2x) for crisp text on retina displays
-
-Step 4: Composite onto Base Image
-  - Sharp composites the text PNG onto the AI-generated base image
-  - Apply blending modes if needed (multiply for dark backgrounds, screen for light)
-  - Output final image in required format/dimensions per ad platform
-```
-
-**Kinsoku Shori Implementation Notes:**
-
-Kinsoku shori (禁則処理) are Japanese typographic rules that prohibit certain characters from appearing at the start or end of a line. This is NOT optional for professional Japanese advertising.
+Follows the exact same pattern as `src/lib/ai/kling.ts`:
 
 ```typescript
-// Characters that CANNOT start a line (gyomatsu kinsoku)
-const LINE_START_PROHIBITED = [
-  '、', '。', '，', '．', '・', '：', '；', '？', '！',
-  '）', '】', '》', '」', '』', '〕', '｝', '〉',
-  'ー', '～', '…', '‥',
-  'っ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ゃ', 'ゅ', 'ょ',
-  'ッ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ャ', 'ュ', 'ョ',
-];
+// Anticipated fal.ai endpoint (verify when available)
+const SEEDANCE_T2V_ENDPOINT = "fal-ai/bytedance/seedance/v2/pro/text-to-video"
+const SEEDANCE_I2V_ENDPOINT = "fal-ai/bytedance/seedance/v2/pro/image-to-video"
 
-// Characters that CANNOT end a line (gyotou kinsoku)
-const LINE_END_PROHIBITED = [
-  '（', '【', '《', '「', '『', '〔', '｛', '〈',
-];
+interface SeedanceOptions {
+  imageUrl?: string          // For image-to-video mode
+  duration?: number          // 4-15 seconds
+  aspectRatio?: "16:9" | "9:16" | "4:3" | "3:4" | "21:9" | "1:1"
+  resolution?: "720p" | "1080p" | "2k"
+  withAudio?: boolean        // Native audio co-generation
+  audioReferences?: string[] // Up to 3 MP3 URLs for audio style
+  videoReferences?: string[] // Up to 3 video URLs for motion style
+}
 ```
 
-These rules must be enforced during the line-break calculation in Step 1. The `opentype.js` glyph metrics + these prohibition tables produce correct line breaks.
+**Seedance 2.0 capabilities relevant to this project:**
 
-**Vertical text (tategaki) considerations:**
-- Characters rotate 90 degrees (except Latin/numbers which use tate-chu-yoko)
-- Punctuation positions shift (。goes to top-right, not bottom-left)
-- Line progression is right-to-left
-- This is primarily used for DOOH and In-Store POP formats
-- Implementation: SVG `writing-mode: vertical-rl` with manual adjustments for punctuation
+| Capability | Value for AI Content Studio | Confidence |
+|------------|----------------------------|------------|
+| Native audio co-generation | Single API call produces video + sound effects/music. Eliminates separate ElevenLabs call for ambient audio. | HIGH |
+| Image-to-video (up to 9 images) | Feed composited campaign images to generate product videos. Better brand consistency than text-only prompts. | HIGH |
+| 9:16 native aspect ratio | Direct TikTok/Instagram Reels output without post-crop. | HIGH |
+| 4-15 second duration range | Matches ad format requirements (15s TikTok, 6s YouTube bumper). | HIGH |
+| @mention reference system | Reference uploaded images/videos/audio in the prompt for precise control. | MEDIUM |
+| 2K resolution output | High-quality for DOOH and premium placements. | MEDIUM |
 
-### Video Processing
+**Seedance 2.0 pricing estimate (via third-party):**
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| FFmpeg | 6.x+ (system binary) | Video processing | Industry standard; resize, crop, concatenate, add audio tracks, format conversion; text overlay via drawtext filter (backup for JP text on video) | HIGH |
-| fluent-ffmpeg | ^2.1+ | FFmpeg Node.js wrapper | Chainable API for FFmpeg commands; async execution with progress events; handles complex filter graphs | HIGH |
+| Resolution | Per-Minute Rate | Per 10-Second Clip |
+|------------|----------------|-------------------|
+| 720p (Basic) | ~$0.10/min | ~$0.017 |
+| 1080p (Standard) | ~$0.40/min | ~$0.067 |
+| 2K (Cinema) | ~$0.80/min | ~$0.133 |
 
-**Video processing use cases:**
-1. **Aspect ratio conversion:** AI generates 16:9; need 9:16 (TikTok), 1:1 (Instagram), 4:5 (LINE)
-2. **Audio mixing:** Overlay ElevenLabs TTS onto Kling/Runway video
-3. **Title card compositing:** Add JP text frames to beginning/end of video
-4. **Format encoding:** H.264 for web delivery; H.265 for higher compression; MP4 container
-5. **Thumbnail extraction:** Pull key frame for campaign grid preview
+At 1080p/10s, Seedance is cheaper than both Kling (~$0.70 via fal.ai for 10s) and Runway (~$0.50 for 10s). This makes it the preferred primary video provider.
 
-**Where to run FFmpeg:**
-- NOT on Vercel (serverless has no FFmpeg binary and 50MB function limit)
-- On the **n8n VPS** (same server, Execute Command node) or a **dedicated media processing VPS**
-- Consider a Docker sidecar with FFmpeg pre-installed alongside n8n
+### Video Pipeline Integration
 
-### Campaign Asset Packaging
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| archiver | ^7.0+ | ZIP generation | Stream-based ZIP creation; add files from buffers or streams; important for large campaign kits (500MB+) without memory exhaustion | HIGH |
-| mime-types | ^2.1+ | MIME type detection | Correct Content-Type headers for varied asset types (PNG, MP4, MP3, PDF) | HIGH |
-
-### UI Component Layer
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Tailwind CSS | ^4.x (verify) | Utility CSS | Rapid UI development; excellent responsive design; purges unused CSS; great DX with VS Code IntelliSense | HIGH |
-| shadcn/ui | Latest | Component primitives | Copy-paste components (not npm dependency); fully customizable; built on Radix UI; accessible; works with Tailwind | HIGH |
-| Radix UI | ^1.x | Accessible primitives | Underlying primitives for shadcn/ui; handles keyboard navigation, focus management, ARIA attributes | HIGH |
-| Lucide React | ^0.460+ | Icons | Clean icon set; tree-shakeable; consistent with shadcn/ui aesthetic | MEDIUM |
-| next-intl | ^3.x (verify) | Internationalization | App Router compatible; server component support; message format for Japanese pluralization rules (which differ from English) | MEDIUM |
-| Zustand | ^5.x (verify) | Client state | Lightweight global state for campaign builder UI state; simpler than Redux; works with React 19 | MEDIUM |
-| TanStack Query | ^5.x | Server state | Campaign list caching, optimistic updates for approval workflow, polling for generation status (supplement to Supabase real-time) | MEDIUM |
-| react-dropzone | ^14.x | File upload | Brand asset uploads (logos, product images); drag-and-drop; file type validation | MEDIUM |
-| Framer Motion | ^11.x | Animation | Campaign grid transitions; progress animations; subtle polish for premium SaaS feel | LOW (nice-to-have) |
-
-**UI architecture note:** The dashboard is Japanese-first, not English-translated-to-Japanese. This means:
-- Default locale is `ja`, English is secondary
-- Button text lengths differ (Japanese is often more compact)
-- Form layouts accommodate vertical text labels where culturally appropriate
-- Date formatting: 2026年2月6日 (Japanese era year optional)
-- Currency: always JPY with Y or 円 symbol, no decimal points
-
-### Email / Notifications
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Resend | Service | Transactional email | Simple API; React Email templates; generous free tier (3K emails/mo); good deliverability | MEDIUM |
-| React Email | ^3.x (verify) | Email templates | JSX email templates; consistent with React codebase; preview in browser during development | MEDIUM |
-
-### Monitoring / Observability
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Sentry | ^8.x | Error tracking | Captures errors across Next.js (client + server), n8n webhooks; source maps; performance tracing | HIGH |
-| Vercel Analytics | Included | Web analytics | Built-in with Vercel; Core Web Vitals; no extra setup | HIGH |
-| Upstash Redis | Service | Rate limiting + queue | Tokyo region available; serverless Redis; rate limit API calls per user; queue campaign generation requests | MEDIUM |
-
-**Why Upstash Redis:**
-- Rate limiting for the generation API (prevent credit abuse)
-- Campaign generation queue (FIFO, max 3 concurrent per constraint)
-- Short-lived cache for AI API responses (dedup identical requests within 5 min)
-- Tokyo region = low latency from Next.js Edge Runtime
-
-### Development Tooling
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| pnpm | ^9.x | Package manager | Faster than npm; strict dependency resolution; disk-efficient; workspace support for future monorepo | HIGH |
-| ESLint | ^9.x | Linting | Flat config format; Next.js plugin; TypeScript-aware | HIGH |
-| Prettier | ^3.x | Formatting | Consistent code style; integrates with ESLint | HIGH |
-| Vitest | ^2.x | Unit testing | Fast, Vite-based; compatible with Jest API; native TypeScript/ESM | HIGH |
-| Playwright | ^1.48+ | E2E testing | Cross-browser; reliable; Vercel integration; can test JP text rendering | MEDIUM |
-| Husky + lint-staged | Latest | Git hooks | Pre-commit linting; prevent broken code from being committed | MEDIUM |
-| Docker Compose | Latest | Local dev environment | Run n8n, PostgreSQL, and Redis locally for development | HIGH |
-
----
-
-## n8n-Specific Deep Dive
-
-### n8n Nodes Used
-
-| Node | Purpose | Configuration Notes |
-|------|---------|-------------------|
-| **Webhook** | Receive campaign briefs from Next.js | POST method; JSON body; respond with 202 Accepted immediately (async processing) |
-| **HTTP Request** | Call all 6 AI provider APIs | Set per-provider authentication; configure timeout (120s for image gen, 300s for video gen) |
-| **IF** | Conditional branching | Check API response status; check if optional providers are requested in brief |
-| **Merge** | Wait for parallel branches | "Wait for All" mode to synchronize after parallel AI calls |
-| **Wait** | Polling delay for async APIs | 15-30 second intervals; combine with loop for status checking |
-| **Set** | Data transformation | Normalize AI API responses to common schema; extract URLs from responses |
-| **Code** | Custom JavaScript | Kinsoku shori calculations; complex data transformations; credit cost calculation |
-| **Supabase** | Database operations | Update campaign status; store asset metadata; log credit usage |
-| **Error Trigger** | Error handling | Catch provider failures; trigger fallback routing; send error webhooks |
-| **Switch** | Multi-path routing | Route to different providers based on brief parameters (e.g., video style selection) |
-| **Loop Over Items** | Batch processing | Process multiple platform-specific formats from single generation |
-| **Execute Command** | System commands | Run FFmpeg for video processing; run Sharp-based compositing scripts |
-
-### n8n Credential Management
-
-Store all AI provider API keys in n8n's credential store (encrypted at rest):
-- Anthropic API key (Claude)
-- BFL / Replicate API key (Flux 1.1 Pro Ultra)
-- Kling API key
-- ElevenLabs API key
-- HeyGen API key
-- Runway API key
-- Supabase service role key
-- Stripe secret key (for webhook verification)
-
-### n8n Environment Recommendations
-
-| Setting | Value | Reason |
-|---------|-------|--------|
-| `EXECUTIONS_TIMEOUT` | 600 (10 min) | Campaign generation can take up to 5 minutes; add buffer |
-| `EXECUTIONS_TIMEOUT_MAX` | 900 (15 min) | Hard ceiling for runaway workflows |
-| `N8N_PAYLOAD_SIZE_MAX` | 256 (MB) | Large video files pass through n8n |
-| `EXECUTIONS_DATA_PRUNE` | true | Prevent disk exhaustion from execution history |
-| `EXECUTIONS_DATA_MAX_AGE` | 168 (hours / 7 days) | Keep 7 days of execution data for debugging |
-| `N8N_CONCURRENCY_PRODUCTION_LIMIT` | 5 | Limit concurrent workflow executions to prevent VPS overload |
-
----
-
-## Japanese Typography Deep Dive
-
-### Font Stack
-
-| Font | Weight Range | Use Case | License |
-|------|-------------|----------|---------|
-| Noto Sans JP | 100-900 | Primary UI + ad copy text | OFL (Open Font License) |
-| Noto Serif JP | 200-900 | Premium/luxury campaigns | OFL |
-| M PLUS Rounded 1c | 100-900 | Casual/friendly campaigns (beauty, F&B) | OFL |
-| M PLUS 1p | 100-900 | Technical/clean campaigns | OFL |
-| Zen Kaku Gothic New | 300-900 | Modern, geometric alternative | OFL |
-
-**Font file strategy:**
-- Bundle font files in the server-side compositing service (NOT downloaded at runtime)
-- Use `.otf` format for opentype.js compatibility
-- Pre-subset fonts if possible (remove unused kanji ranges for faster loading in web dashboard)
-- For web dashboard: use `next/font` with `google` provider for Noto Sans JP; self-host for compositing service
-
-### Text Processing Libraries
-
-| Library | Purpose | Notes |
-|---------|---------|-------|
-| opentype.js | Glyph metrics, font parsing | Essential for precise character positioning in kinsoku shori calculations |
-| budoux | Japanese line-break estimation | Google's ML-based Japanese word segmenter; better than naive character-based breaking; helps determine natural break points before applying kinsoku shori rules |
-| TinySegmenter / kuromoji.js | Morphological analysis | If Claude's copy output needs post-processing for word boundaries; kuromoji.js is more accurate but heavier |
-
-**budoux recommendation (HIGH confidence):**
-Google's `budoux` library is specifically designed for CJK line breaking. It uses a small ML model to predict word boundaries in Japanese text (which has no spaces between words). Use this BEFORE applying kinsoku shori rules:
-
-```typescript
-import { loadDefaultJapaneseParser } from 'budoux';
-
-const parser = loadDefaultJapaneseParser();
-const segments = parser.parse('今日はとても天気がいいですね。');
-// ["今日は", "とても", "天気が", "いいですね。"]
-// Then apply kinsoku shori rules to these segments for line breaking
-```
-
-### Platform-Specific Asset Dimensions
-
-| Platform | Format | Dimensions | Aspect Ratio | Notes |
-|----------|--------|-----------|--------------|-------|
-| LINE Rich Message | Image | 1040x1040 | 1:1 | Max 1MB; can be subdivided into 2-6 tap zones |
-| LINE Rich Menu | Image | 2500x1686 or 2500x843 | Custom | Bottom menu bar; 1-6 tap zones |
-| Yahoo! JAPAN Display | Banner | 600x500, 300x250, 728x90 | Various | YDN specs; text overlay limits |
-| Rakuten Product | Main image | 700x700 min | 1:1 | White background required for some categories |
-| Instagram Feed | Image | 1080x1080 | 1:1 | Also 1080x1350 (4:5) for portrait |
-| Instagram Story/Reel | Video | 1080x1920 | 9:16 | 15-60s; safe zones for UI overlay |
-| TikTok | Video | 1080x1920 | 9:16 | 15-60s |
-| Twitter/X | Image | 1200x675 | 16:9 | Also 1200x1200 for 1:1 |
-| GDN | Banner | 300x250, 336x280, 728x90, 160x600, 320x50 | Various | Responsive display ads |
-| YouTube Pre-Roll | Video | 1920x1080 | 16:9 | 15s or 30s; first 5s non-skippable |
-| DOOH | Video/Image | 1080x1920 (portrait), 1920x1080 (landscape) | 9:16 or 16:9 | High-res; large file OK |
-| Email | Image | 600px width max | Flexible | Inline images; dark mode considerations |
-| In-Store POP | Image | 2480x3508 (A4 300dpi) | A4 | Print-ready; CMYK conversion needed |
-
----
-
-## Infrastructure Architecture
-
-### Hosting Topology
+Update `src/lib/ai/video-pipeline.ts` to add Seedance as the **primary** video provider with Kling and Runway as fallbacks:
 
 ```
-[Users in Japan]
-      |
-      v
-[Vercel Edge CDN - Tokyo (hnd1)]
-      |
-      v
-[Next.js App - Serverless Functions]
-      |
-      +---> [Supabase - Tokyo (ap-northeast-1)]
-      |       - PostgreSQL
-      |       - Auth
-      |       - Real-time
-      |       - Storage (temp)
-      |
-      +---> [Cloudflare R2 - Tokyo PoP]
-      |       - Asset delivery
-      |       - ZIP downloads
-      |
-      +---> [Upstash Redis - Tokyo]
-      |       - Rate limiting
-      |       - Queue
-      |
-      +---> [n8n VPS - US (existing)]
-              - AI workflow orchestration
-              - FFmpeg video processing
-              - JP text compositing service
-              |
-              +---> [Claude API - Anthropic]
-              +---> [Flux API - BFL/Replicate]
-              +---> [Kling API]
-              +---> [ElevenLabs API]
-              +---> [HeyGen API]
-              +---> [Runway API]
+New fallback chain:
+  Seedance 2.0 (primary) -> Kling v2.6 (fallback) -> Runway Gen-4 (fallback)
+
+For TikTok/Reels (9:16 native audio):
+  Seedance 2.0 (preferred -- native audio matches TikTok aesthetic)
+
+For cinematic (16:9):
+  Runway Gen-4 (preferred -- strongest cinematic quality)
+  Seedance 2.0 (fallback)
+
+For product demo (1:1):
+  Seedance 2.0 (preferred -- supports 1:1 natively)
+  Kling (fallback)
 ```
 
-### Latency Considerations
+Update `src/lib/ai/provider-health.ts` to track "seedance" as a new provider ID in the circuit breaker.
 
-| Path | Latency | Mitigation |
-|------|---------|------------|
-| User -> Vercel Tokyo Edge | <20ms | Edge CDN in Tokyo |
-| Vercel -> Supabase Tokyo | <5ms | Same region |
-| Vercel -> n8n US VPS | ~120ms | Acceptable for async job submission; not in hot path |
-| n8n -> AI APIs | Variable (50-300ms per request) | APIs are global; US VPS minimizes hops to most AI providers (US-based) |
-| n8n -> Supabase Tokyo | ~120ms | Status updates; acceptable for async updates |
-| User -> R2 Tokyo PoP | <20ms | CDN edge delivery |
+### Environment Variables (New)
 
-**Why n8n stays on US VPS (not Tokyo):**
-- Most AI provider APIs (Anthropic, Replicate, ElevenLabs, Runway, HeyGen) are US-based
-- n8n -> AI API latency is lower from US
-- n8n -> Supabase Tokyo latency (~120ms) is acceptable for async status updates
-- Moving n8n to Tokyo would increase latency to all 6 AI providers
-- The user never directly interacts with n8n; all interaction is via Next.js dashboard
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `SEEDANCE_PROVIDER` | `fal` / `wavespeed` / `byteplus` | Config flag to switch provider without code change |
+| `WAVESPEED_API_KEY` | -- | Only needed if using WaveSpeedAI as provider |
+| `BYTEPLUS_API_KEY` | -- | Only needed when official BytePlus API is available |
+
+No new env var needed for fal.ai -- reuses existing `FAL_KEY`.
 
 ---
 
-## Alternatives Considered
+## 3. NotebookLM MCP Server (Knowledge Base)
 
-| Category | Recommended | Alternative | Why Not Alternative |
-|----------|-------------|-------------|-------------------|
-| Framework | Next.js 15 | Remix, Nuxt | Vercel-native; larger JP ecosystem; RSC for dashboard |
-| Database | Supabase (PostgreSQL) | Neon, PlanetScale | Supabase bundles Auth + Storage + Real-time; fewer services to manage |
-| ORM | Drizzle | Prisma | Drizzle: no query engine binary, Edge-compatible, lighter serverless footprint |
-| Auth | Supabase Auth | Clerk, NextAuth | Free, bundled, RLS-integrated; no per-MAU pricing |
-| Storage | R2 + Supabase Storage | AWS S3, GCS | R2: zero egress fees; critical for media-heavy SaaS |
-| CSS | Tailwind CSS | CSS Modules, Styled Components | Utility-first is fastest for rapid iteration; excellent tree-shaking |
-| Components | shadcn/ui | Material UI, Ant Design, Chakra UI | Copy-paste ownership; no dependency lock-in; customizable JP aesthetics |
-| State | Zustand | Redux, Jotai | Simplest API; minimal boilerplate; sufficient for dashboard state |
-| Image processing | Sharp + resvg-js | Canvas (node-canvas), Jimp | Sharp is 10x faster (libvips); resvg-js handles fonts better than node-canvas |
-| JP line breaking | budoux | Manual character rules | ML-based word segmenter handles edge cases manual rules miss |
-| Package manager | pnpm | npm, yarn | Strict resolution; faster installs; disk efficient |
-| Orchestration | n8n (self-hosted) | Temporal, Inngest, custom | Project constraint; visual builder; user has n8n experience |
-| Billing | Stripe | LemonSqueezy, Paddle | JPY support; metered billing API; Japanese payment methods |
-| Email | Resend | SendGrid, AWS SES | Simple API; React Email integration; generous free tier |
-| Monitoring | Sentry | Datadog, New Relic | Best error tracking DX for JS/TS; generous free tier |
-| Redis | Upstash | Redis Cloud, self-hosted | Serverless pricing; Tokyo region; no server to manage |
+### Architecture Decision
 
----
+NotebookLM (Google) provides a zero-hallucination knowledge base powered by Gemini 2.5. The PleasePrompto MCP server exposes NotebookLM as an MCP-compatible tool that AI agents can query at runtime. This replaces the need to build a custom RAG pipeline (no vector DB, no embeddings, no chunking).
 
-## What NOT to Use (Anti-Recommendations)
+**Why NotebookLM MCP over custom RAG:**
+1. **Zero infrastructure:** No Qdrant/Pinecone, no embedding pipeline, no chunk optimization. Google handles all indexing.
+2. **Citation-backed:** Answers include source citations from uploaded documents. Agents can verify claims.
+3. **Refuses hallucination:** NotebookLM refuses to answer questions outside uploaded documents rather than inventing answers.
+4. **Pre-indexed semantic understanding:** Upload the 9 research documents once. No iterative embedding tuning.
+5. **MCP protocol:** n8n's MCP Client Tool node connects directly. Claude Code also connects for development-time queries.
 
-| Technology | Why Not |
-|------------|---------|
-| **node-canvas** | System dependency (cairo); painful Docker setup; worse font rendering than resvg-js for CJK; Sharp + resvg-js combo is superior |
-| **Prisma** | Query engine binary adds cold start latency on Vercel; Drizzle is lighter and Edge-compatible |
-| **Material UI / Ant Design** | Heavy bundle; opinionated design system fights against JP-native UI; shadcn/ui gives full control |
-| **Firebase** | No Tokyo region for Firestore; Realtime Database is legacy; Supabase is the better fit for PostgreSQL + Tokyo |
-| **AWS Lambda for n8n** | n8n needs persistent process; Lambda cold starts would break workflow execution; VPS is correct |
-| **Puppeteer/Playwright for text rendering** | Headless browser is a sledgehammer; resvg-js + Sharp is faster, lighter, more predictable for text-on-image |
-| **ImageMagick** | Slower than Sharp (libvips); harder to deploy; worse Node.js bindings |
-| **GraphQL** | Over-engineering for this use case; REST + Supabase client SDK is sufficient; adds complexity without clear benefit |
-| **Microservices** | Premature for a team of 1-2; monolithic Next.js + n8n orchestration is the right scale |
-| **Kubernetes** | Over-engineering; Docker Compose on VPS is sufficient for 3 concurrent campaigns |
-| **Self-hosted email (Postfix, etc.)** | Deliverability nightmare; use Resend or similar transactional email service |
-| **i18next** | next-intl is more App Router-native; i18next has legacy SSR patterns |
+### Setup Components
 
----
+| Technology | Version | Purpose | Confidence |
+|------------|---------|---------|------------|
+| notebooklm-mcp | latest (npm) | MCP server exposing NotebookLM to AI agents | HIGH |
+| n8n MCP Client Tool node | Built-in (n8n 2.x) | Connects AI Agent nodes to the MCP server | HIGH |
+| Google NotebookLM | Service | Knowledge base hosting and semantic search | HIGH |
 
-## Installation Blueprint
+### NotebookLM MCP Server Setup
+
+**Installation on n8n VPS:**
 
 ```bash
-# Initialize project
-pnpm create next-app@latest ai-studio --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
-
-# Core dependencies
-pnpm add @supabase/supabase-js @supabase/ssr drizzle-orm postgres stripe @stripe/stripe-js
-
-# Image/Video processing (server-side only)
-pnpm add sharp @resvg/resvg-js opentype.js satori budoux fluent-ffmpeg archiver
-
-# UI
-pnpm add zustand @tanstack/react-query next-intl lucide-react react-dropzone framer-motion class-variance-authority clsx tailwind-merge
-
-# Monitoring
-pnpm add @sentry/nextjs @upstash/redis @upstash/ratelimit
-
-# Email
-pnpm add resend @react-email/components
-
-# Dev dependencies
-pnpm add -D drizzle-kit @types/fluent-ffmpeg @types/archiver vitest @vitejs/plugin-react playwright eslint-config-next prettier husky lint-staged
-
-# shadcn/ui initialization (after project setup)
-pnpm dlx shadcn@latest init
+# Run as a persistent service alongside n8n
+npx notebooklm-mcp@latest
 ```
 
-**Note on Sharp in Vercel:**
-Sharp works in Vercel Serverless Functions (Node.js runtime) but NOT in Edge Runtime. For the compositing pipeline, either:
-1. Run compositing in a Vercel Serverless Function (Node.js runtime, not Edge) -- works for simple overlays
-2. Run compositing on the n8n VPS as a separate service -- better for complex multi-step compositing with FFmpeg
+**MCP Server exposes 16 tools across 3 profiles:**
 
-**Recommendation:** Run the full compositing pipeline (Sharp + resvg-js + FFmpeg) on the n8n VPS as a Docker service. The n8n workflow calls this service via HTTP. This keeps heavy processing off Vercel (which has execution time limits) and co-locates it with FFmpeg.
+| Profile | Tools | Use Case |
+|---------|-------|----------|
+| Minimal (5 tools) | ask_question, get_health, list_notebooks, select_notebook, get_notebook | Sufficient for n8n agent runtime queries |
+| Standard (10 tools) | + setup_auth, list_sessions, add_notebook, update_notebook, search_notebooks | For library management |
+| Full (16 tools) | + cleanup_data, re_auth, remove_notebook, reset_session, close_session, get_library_stats | For maintenance |
+
+**Recommendation:** Use the **minimal profile** for n8n agent runtime. The agents only need `ask_question` and `select_notebook`. Library management is done manually during setup, not at runtime.
+
+### Authentication Flow
+
+NotebookLM MCP uses persistent browser automation (Playwright) with humanized interactions to maintain a Google session. Authentication is done once during setup:
+
+1. Run `npx notebooklm-mcp@latest` on the n8n VPS.
+2. Say "Log me in to NotebookLM" -- Chrome opens for Google login.
+3. Session persists locally (cookies/tokens stored on disk).
+4. The MCP server runs as a long-lived process, maintaining the session.
+
+**Concern: Session persistence on a headless VPS.** The PleasePrompto MCP server requires a browser for initial auth. On the n8n VPS:
+- Install Chrome/Chromium headless.
+- Run initial auth with `--no-sandbox` flag if needed.
+- Session tokens persist in `~/.notebooklm-mcp/` directory.
+- Monitor for session expiry (Google sessions typically last 2-4 weeks).
+
+### Knowledge Base Content
+
+Upload these 9 research documents to a single NotebookLM notebook:
+
+| Document | Content | Agent Use |
+|----------|---------|-----------|
+| SaaS Implementation Plan | Full technical architecture, agent pipeline design | Strategic Insight, Orchestrator |
+| Campaign Kit Deliverables | Concrete example of complete campaign output | Creative Director, Art Director |
+| Japanese Advertising Library | Cultural intelligence, seasonal calendar, sei-katsu-sha | Localization, Strategic Insight |
+| Dual Audience Strategy | B2B/B2C positioning for Japanese market | Strategic Insight, Creative Director |
+| Schwartz/LF8/StoryBrand frameworks | Advertising psychology frameworks | Strategic Insight, Copywriter |
+| Platform specifications | LINE, Yahoo, Rakuten, IG, TikTok specs | Media Intelligence, Art Director |
+| Keihyouhou/Yakkihou regulations | Japanese advertising law compliance rules | Localization (compliance review) |
+| Prompt engineering guide | Fukatsu Method, anti-slop word list | Copywriter |
+| Additional campaign scenarios | More example briefs and outputs | All agents (few-shot examples) |
+
+### n8n MCP Client Tool Configuration
+
+In each agent sub-workflow that needs knowledge access:
+
+1. Add an **MCP Client Tool** sub-node to the AI Agent node.
+2. Configure:
+   - **Transport:** SSE (Server-Sent Events)
+   - **URL:** `http://localhost:3456` (MCP server running on same VPS as n8n)
+   - **Authentication:** None (local connection; MCP server handles Google auth internally)
+3. The AI Agent can then call `ask_question` with questions like:
+   - "What are the kinsoku shori rules for LINE ad text?"
+   - "What is the Schwartz awareness level framework?"
+   - "What platform dimensions does Yahoo! JAPAN Display require?"
+
+### What NOT to Build
+
+| Anti-Pattern | Why Avoid |
+|-------------|-----------|
+| Custom RAG with Qdrant/Pinecone | Unnecessary complexity. NotebookLM handles indexing, chunking, embedding, and retrieval. |
+| Embedding pipeline for research docs | NotebookLM pre-indexes uploaded documents semantically. |
+| Redis-cached knowledge lookups | MCP queries are fast enough for agent runtime (sub-second). |
+| Duplicate knowledge in system prompts | Keep system prompts focused on agent role/instructions. Factual knowledge comes from NotebookLM at runtime. Reduces prompt token count. |
 
 ---
 
-## Version Verification Notes
+## 4. Auto Mode Conversational Brief Builder
 
-**IMPORTANT: The following versions are based on training data (cutoff May 2025). Before creating `package.json`, verify current versions:**
+### Architecture Decision
 
-| Package | Stated Version | Verify At | Risk if Wrong |
-|---------|---------------|-----------|---------------|
-| Next.js | ^15.x | `npm view next version` | LOW — 15.x is stable; minor versions are non-breaking |
-| React | ^19.x | `npm view react version` | LOW — ships with Next.js |
-| Sharp | ^0.33+ | `npm view sharp version` | LOW — API is stable across 0.3x versions |
-| @resvg/resvg-js | ^2.6+ | `npm view @resvg/resvg-js version` | LOW — API is stable |
-| Drizzle ORM | ^0.34+ | `npm view drizzle-orm version` | MEDIUM — Drizzle has frequent releases; check migration syntax |
-| Satori | ^0.12+ | `npm view satori version` | MEDIUM — API may have changed |
-| Tailwind CSS | ^4.x | `npm view tailwindcss version` | MEDIUM — v4 has new config format vs v3 |
-| shadcn/ui | CLI-based | `pnpm dlx shadcn@latest` | LOW — always pulls latest |
-| budoux | ^0.6+ | `npm view budoux version` | LOW — stable, small API surface |
-| Stripe SDK | ^17.x | `npm view stripe version` | MEDIUM — check for breaking changes |
-| Zustand | ^5.x | `npm view zustand version` | LOW — tiny API surface |
-| TanStack Query | ^5.x | `npm view @tanstack/react-query version` | LOW — v5 API is stable |
+The Auto mode brief builder is a chat-based interface where a non-technical user (solopreneur) has a guided conversation with an AI that extracts campaign brief parameters through natural dialogue. This replaces the structured form for the Auto tier.
+
+**Stack choice: Vercel AI SDK `useChat` hook + Next.js API route with `streamText`.**
+
+| Technology | Version | Purpose | Why | Confidence |
+|------------|---------|---------|-----|------------|
+| ai (Vercel AI SDK) | ^4.2+ (install as new dependency) | Chat streaming and state management | useChat hook manages conversation state, streaming responses, tool calls. Already used by Next.js ecosystem. SSE streaming is the standard transport. | HIGH |
+| @ai-sdk/anthropic | ^1.x (install as new dependency) | Claude provider for AI SDK | Connects Vercel AI SDK to Claude API. Supports tool calling for structured brief extraction. | HIGH |
+
+**Why Vercel AI SDK over raw Anthropic SDK for the chat UI:**
+- The existing `@anthropic-ai/sdk` (v0.73) is already installed for server-side structured generation (qa-agent, compliance-agent, copy generation). Keep it for those use cases.
+- For the conversational chat UI, Vercel AI SDK provides `useChat()` React hook with built-in streaming, loading states, and message management. Building this from scratch with the raw Anthropic SDK would require reimplementing all of that.
+- Vercel AI SDK `streamText` uses SSE natively -- works perfectly with Next.js App Router API routes.
+
+### Implementation Pattern
+
+**API Route: `/api/brief-builder/chat`**
+
+```typescript
+// Uses Vercel AI SDK streamText (NOT the existing claude.ts pattern)
+import { streamText, tool } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
+
+export async function POST(req: Request) {
+  const { messages } = await req.json()
+
+  const result = streamText({
+    model: anthropic('claude-sonnet-4-5-20250514'),
+    system: BRIEF_BUILDER_SYSTEM_PROMPT, // Guides conversation to extract brief params
+    messages,
+    tools: {
+      extract_brief: tool({
+        description: 'Extract structured brief when enough info gathered',
+        parameters: z.object({
+          objective: z.string(),
+          targetAudience: z.string(),
+          platforms: z.array(z.string()),
+          // ... all CampaignBrief fields
+        }),
+      }),
+    },
+  })
+
+  return result.toDataStreamResponse()
+}
+```
+
+**Client Component:**
+
+```typescript
+import { useChat } from '@ai-sdk/react'
+
+function BriefBuilder() {
+  const { messages, input, handleSubmit, isLoading } = useChat({
+    api: '/api/brief-builder/chat',
+  })
+  // Render chat UI with messages
+}
+```
+
+### Brief Builder UX Components (New)
+
+| Component | Purpose | Built With |
+|-----------|---------|------------|
+| `BriefChat` | Full-screen chat interface for Auto mode | useChat hook + existing shadcn/ui components |
+| `BriefPreview` | Side panel showing extracted brief fields as they're discovered | Zustand store synced from tool call results |
+| `BriefConfirmation` | Modal showing complete brief before submission | Existing brief display components, repurposed |
+| `ModeSelector` | Auto/Guided/Pro mode toggle on campaign creation page | shadcn/ui Tabs or SegmentedControl |
+
+### Packages to Install
+
+```bash
+pnpm add ai @ai-sdk/anthropic
+```
+
+**These are the ONLY new npm packages for the brief builder.** The chat UI uses existing shadcn/ui components (Input, ScrollArea, Avatar, Card).
+
+### What NOT to Add
+
+| Anti-Pattern | Why Avoid |
+|-------------|-----------|
+| assistant-ui library | Over-engineered for this use case. useChat + shadcn/ui components are sufficient. |
+| Socket.IO for chat streaming | Vercel AI SDK uses SSE natively. No WebSocket needed for chat. |
+| Separate chat microservice | The brief builder is a single API route. No need for a separate service. |
+| OpenAI for brief builder | Claude is better at Japanese conversation. The project is already Anthropic-native. |
 
 ---
 
-## Sources and Confidence Assessment
+## 5. Brand Memory Persistent Storage
 
-| Recommendation | Confidence | Source Basis |
-|----------------|------------|-------------|
-| Next.js 15 + App Router | HIGH | Established standard as of May 2025; no reason to expect major shift |
-| Supabase for Auth + DB + Storage + Real-time | HIGH | Well-established platform; Tokyo region confirmed in training data |
-| Drizzle over Prisma | HIGH | Well-documented advantages for serverless/Edge; confirmed by multiple sources before cutoff |
-| Sharp for image processing | HIGH | Industry standard Node.js image library; libvips-based; extensively documented |
-| resvg-js for SVG rendering | HIGH | Rust-based, well-maintained; standard for server-side SVG |
-| opentype.js for font metrics | HIGH | Only real option for client/server-side OTF/TTF parsing in JS |
-| budoux for JP line breaking | HIGH | Google-maintained; specifically designed for CJK; used in Chrome |
-| Kinsoku shori character tables | HIGH | JIS X 4051 standard; well-documented typographic rules |
-| n8n workflow patterns | HIGH | Based on n8n's documented node types and execution model |
-| Cloudflare R2 for storage | HIGH | Zero egress pricing confirmed; S3-compatible API confirmed |
-| Stripe hybrid billing pattern | HIGH | Well-documented pattern; JPY support confirmed |
-| Platform asset dimensions | MEDIUM | Based on platform specs known at training cutoff; LINE/Yahoo!/Rakuten specs should be re-verified as they may have updated |
-| Specific npm package versions | MEDIUM | Versions approximate; verify with `npm view` before use |
-| Upstash Redis Tokyo region | MEDIUM | Availability was confirmed before cutoff; verify current region list |
-| Neon comparison | MEDIUM | Feature comparison based on May 2025 knowledge; both platforms evolve rapidly |
-| Tailwind CSS v4 | MEDIUM | v4 was in development at cutoff; verify stable release status |
+### Architecture Decision
+
+Brand Memory stores per-brand contextual knowledge that agents reference across campaigns: past campaign performance, style preferences learned from approvals/rejections, banned phrases, preferred expressions, and accumulated creative direction.
+
+**Storage: Supabase PostgreSQL JSONB + Zustand persist middleware.**
+
+No new services needed. Brand Memory is a database feature, not an infrastructure addition.
+
+### Database Schema Addition
+
+New table in `src/lib/db/schema.ts`:
+
+```typescript
+export const brandMemory = pgTable("brand_memory", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  brandProfileId: uuid("brand_profile_id")
+    .references(() => brandProfiles.id)
+    .notNull(),
+  category: text("category").notNull(),
+    // 'style_preference' | 'banned_phrase' | 'preferred_expression' |
+    // 'performance_insight' | 'creative_direction' | 'compliance_note'
+  key: text("key").notNull(),
+  value: jsonb("value").notNull(),
+  source: text("source").notNull(),
+    // 'user_explicit' | 'learned_approval' | 'learned_rejection' |
+    // 'compliance_flag' | 'performance_data'
+  confidence: integer("confidence").notNull().default(50), // 0-100
+  campaignId: uuid("campaign_id").references(() => campaigns.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+})
+```
+
+### Client-Side Brand Memory Cache
+
+Zustand persist middleware caches frequently-accessed brand memory on the client to avoid repeated DB queries during the brief builder conversation:
+
+```typescript
+// Uses existing zustand (v5.0.11) + persist middleware (built-in)
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+interface BrandMemoryStore {
+  memories: Record<string, BrandMemoryEntry[]> // keyed by brandProfileId
+  lastFetched: Record<string, number>
+  // ...
+}
+
+const useBrandMemory = create<BrandMemoryStore>()(
+  persist(
+    (set, get) => ({ /* ... */ }),
+    {
+      name: 'brand-memory-cache',
+      partialize: (state) => ({
+        memories: state.memories, // persist memories
+        lastFetched: state.lastFetched,
+      }),
+      version: 1, // for schema migration
+    }
+  )
+)
+```
+
+**Why Zustand persist over IndexedDB/custom cache:**
+- Zustand is already installed (v5.0.11).
+- persist middleware is built-in (no additional package).
+- Supports partialize (only cache specific keys, not full store).
+- Supports version migrations for schema evolution.
+- localStorage is sufficient for brand memory cache (small JSON data, not media).
+
+### n8n Agent Access to Brand Memory
+
+Agents access Brand Memory via the existing Supabase connection in n8n:
+1. Orchestrator queries `brand_memory` table for the campaign's brand at pipeline start.
+2. Relevant memories are included in each agent's context (appended to the user prompt, not the system prompt).
+3. After campaign completion, the Creative Director agent writes new memories based on the campaign output.
+
+No new n8n nodes needed. Uses existing Supabase node + HTTP Request to Next.js API.
+
+### What NOT to Build
+
+| Anti-Pattern | Why Avoid |
+|-------------|-----------|
+| Separate Brand Memory service | It is a database table + API routes. Not complex enough for a service. |
+| Vector embeddings for brand memories | Overkill. Brand memories are structured key-value pairs, not unstructured documents. |
+| Real-time sync with Supabase Realtime | Brand memory changes are infrequent (per-campaign, not per-second). Standard API fetch is sufficient. |
 
 ---
 
-## Key Decisions Summary
+## 6. Compliance Auto-Rewrite Pipeline
 
-1. **Supabase as the integrated platform** (Auth + DB + Storage + Real-time) rather than assembling separate services -- reduces operational complexity for a small team
-2. **Drizzle ORM** for type-safe database access without Prisma's serverless overhead
-3. **Sharp + resvg-js + opentype.js + budoux** as the Japanese text compositing stack -- this is the technical moat
-4. **R2 for asset delivery** -- zero egress fees prevent cost explosion as the platform scales
-5. **n8n stays on US VPS** -- closer to AI provider APIs; never in the user's hot path
-6. **Compositing runs on n8n VPS** (not Vercel) -- co-located with FFmpeg; no serverless time limits
-7. **budoux for Japanese word segmentation** before kinsoku shori -- ML-based, handles edge cases that character-level rules miss
-8. **next-intl for i18n** (not i18next) -- App Router native; better RSC support
+### Architecture Decision
+
+v1.0 has a compliance check agent (`src/lib/ai/compliance-agent.ts`) that identifies issues and suggests rewrites. v1.1 upgrades this to **auto-rewrite**: when compliance issues are detected, the system automatically rewrites the problematic copy and presents the fixed version alongside the original.
+
+**No new packages needed.** The compliance auto-rewrite is a prompt engineering + workflow change, not a stack change.
+
+### Implementation Approach
+
+| Component | Change | Stack Impact |
+|-----------|--------|-------------|
+| `compliance-agent.ts` | Add `autoRewrite: true` mode that generates compliant alternatives | None (same Anthropic SDK, same tool-use pattern) |
+| n8n compliance sub-workflow | Add rewrite loop: check -> rewrite -> re-check (max 2 iterations) | Uses existing AI Agent + Code nodes |
+| `complianceReports` table | Add `rewrittenVariants` JSONB column for auto-fixed copy | Drizzle schema migration |
+| Compliance review UI | Show original vs. rewritten side-by-side with diff highlighting | Existing React components |
+
+### Compliance Knowledge Source
+
+The compliance agent queries NotebookLM MCP for:
+- Keihyouhou (景品表示法) prohibited claims
+- Yakkihou (薬機法) 56 permitted cosmetics efficacy expressions
+- Platform-specific advertising policies
+- JARO guidelines
+
+This replaces hardcoded compliance rules in the system prompt with runtime knowledge queries -- more maintainable and updatable without code deploys.
+
+---
+
+## Complete New Dependencies Summary
+
+### npm Packages to Add
+
+```bash
+# Auto Mode Brief Builder (conversational UI)
+pnpm add ai @ai-sdk/anthropic
+```
+
+That's it. Two packages. Everything else uses existing dependencies or is configured at the n8n/infrastructure level.
+
+### npm Packages NOT to Add
+
+| Package | Why Not |
+|---------|---------|
+| `@wavespeed/sdk` | Raw HTTP fetch is sufficient; WaveSpeedAI is a secondary provider that may not be used |
+| `@langchain/core` | n8n handles LangChain internally in AI Agent nodes; do not add to Next.js |
+| `qdrant-client` or `@pinecone-database/pinecone` | NotebookLM MCP replaces custom RAG |
+| `socket.io` | Not needed; Vercel AI SDK uses SSE; Supabase Realtime handles progress |
+| `openai` | Not needed; Claude handles all agent reasoning; no GPT-4o in v1.1 pipeline |
+| `assistant-ui` | Over-engineered; useChat + shadcn/ui is sufficient |
+| `@modelcontextprotocol/sdk` | n8n's built-in MCP Client Tool node handles MCP. Next.js does not need MCP. |
+
+### Environment Variables (New)
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `SEEDANCE_PROVIDER` | Next.js + n8n | `fal` / `wavespeed` / `byteplus` -- provider routing flag |
+| `WAVESPEED_API_KEY` | n8n | Only if using WaveSpeedAI for Seedance |
+| `BYTEPLUS_API_KEY` | n8n | Only when official BytePlus API available |
+| `NOTEBOOKLM_MCP_URL` | n8n | URL of the NotebookLM MCP server (e.g., `http://localhost:3456`) |
+| `N8N_AI_ENABLED` | n8n | `true` -- required to enable AI Agent nodes in n8n 2.x |
+
+### Infrastructure Changes
+
+| Change | What | Why |
+|--------|------|-----|
+| Upgrade n8n to 2.x | Docker image tag update | 1.x EOL March 2026; AI Agent nodes |
+| Install NotebookLM MCP server | `npx notebooklm-mcp@latest` on VPS | Knowledge base for agent runtime |
+| Install Chrome/Chromium on VPS | System package | Required for NotebookLM MCP auth flow |
+| Increase VPS memory | 4GB -> 8GB recommended | 7-agent pipeline + NotebookLM MCP server running concurrently |
+
+---
+
+## Database Schema Changes Summary
+
+| Table | Change | Purpose |
+|-------|--------|---------|
+| `brand_memory` | **New table** | Persistent brand knowledge across campaigns |
+| `compliance_reports` | Add `rewritten_variants` JSONB column | Store auto-rewritten compliant copy |
+| `campaigns` | Add `mode` text column (`auto` / `guided` / `pro`) | Track which mode created the campaign |
+| `campaigns` | Add `brief_conversation` JSONB column | Store Auto mode chat transcript |
+| `agent_outputs` | **New table** | Store intermediate agent outputs for audit/review |
+
+---
+
+## Integration Points Map
+
+```
+Next.js App (Vercel Tokyo)
+  |
+  |-- [NEW] /api/brief-builder/chat  (Vercel AI SDK streamText -> Claude)
+  |         Uses: ai, @ai-sdk/anthropic
+  |         Returns: SSE stream to useChat() client hook
+  |
+  |-- [EXISTING] /api/campaigns       (POST -> triggers n8n webhook)
+  |         Sends: brief JSON + brand profile
+  |         New: includes brandMemory context
+  |
+  |-- [EXISTING] /api/webhooks/n8n    (receives results from n8n)
+  |         New: receives agent_outputs for audit trail
+  |         New: receives compliance rewrite results
+  |
+  v
+n8n 2.x (Self-hosted VPS)
+  |
+  |-- [NEW] Master Orchestrator Workflow (AI Agent, Orchestrator pattern)
+  |     |-- [NEW] 7 Sub-Workflow Agents (AI Agent per workflow)
+  |     |-- [NEW] MCP Client Tool -> NotebookLM MCP Server (localhost)
+  |     |-- [EXISTING] HTTP Request -> AI Provider APIs
+  |     |-- [NEW] Seedance 2.0 via fal.ai (same FAL_KEY as Kling)
+  |
+  |-- [EXISTING] HTTP Request callbacks to Next.js /api/webhooks/n8n
+  |
+  v
+NotebookLM MCP Server (same VPS, localhost:3456)
+  |
+  |-- [NEW] Persistent Google auth session
+  |-- [NEW] 9 research documents uploaded to NotebookLM
+  |-- Exposes: ask_question, select_notebook tools via MCP
+```
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| n8n 2.x upgrade + AI Agent nodes | HIGH | n8n 2.0 is released and stable; AI Agent nodes are documented and widely used |
+| Multi-agent orchestrator pattern in n8n | HIGH | Multiple community examples and official docs confirm the pattern |
+| Seedance 2.0 via fal.ai | MEDIUM | fal.ai currently has Seedance 1.0/1.5; 2.0 endpoint naming is anticipated but unverified |
+| Seedance 2.0 API parameters | MEDIUM | Based on multiple third-party guides; official API spec not published yet |
+| NotebookLM MCP server | MEDIUM | PleasePrompto implementation is active and documented; session persistence on headless VPS needs validation |
+| n8n MCP Client Tool node | HIGH | Official n8n documentation confirms SSE transport support |
+| Vercel AI SDK useChat for brief builder | HIGH | Mature, well-documented; v4.2 confirmed with message parts support |
+| Brand Memory in PostgreSQL JSONB | HIGH | Standard database pattern; no new technology |
+| Compliance auto-rewrite | HIGH | Extension of existing compliance-agent.ts; same Claude tool-use pattern |
+| Zustand persist for brand memory cache | HIGH | Built-in middleware; already using Zustand v5 |
+
+---
+
+## Sources
+
+- [n8n AI Agent Tool node docs](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolaiagent/)
+- [n8n Call n8n Workflow Tool docs](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolworkflow/)
+- [n8n MCP Client Tool docs](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolmcp/)
+- [n8n Tools Agent docs](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/tools-agent/)
+- [n8n Anthropic Chat Model docs](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatanthropic/)
+- [n8n 2.0 release blog](https://blog.n8n.io/introducing-n8n-2-0/)
+- [n8n multi-agent orchestration patterns](https://hatchworks.com/blog/ai-agents/multi-agent-solutions-in-n8n/)
+- [n8n sub-workflows docs](https://docs.n8n.io/flow-logic/subworkflows/)
+- [n8n streaming responses docs](https://docs.n8n.io/workflows/streaming/)
+- [PleasePrompto NotebookLM MCP GitHub](https://github.com/PleasePrompto/notebooklm-mcp)
+- [Seedance 2.0 complete guide (NxCode)](https://www.nxcode.io/resources/news/seedance-2-0-complete-guide-ai-video-generation-2026)
+- [Seedance 2.0 API guide (WaveSpeedAI)](https://wavespeed.ai/blog/posts/seedance-2-0-complete-guide-multimodal-video-creation/)
+- [Atlas Cloud Seedance 2.0 collection](https://www.atlascloud.ai/collections/seedance2)
+- [Seedance 2.0 pricing (WaveSpeedAI)](https://wavespeed.ai/blog/posts/blog-seedance-2-0-pricing-credits/)
+- [fal.ai Seedance 1.5 user guide](https://fal.ai/learn/devs/seedance-1-5-user-guide)
+- [Vercel AI SDK 4.2 release](https://vercel.com/blog/ai-sdk-4-2)
+- [Vercel AI SDK docs](https://ai-sdk.dev/docs/introduction)
+- [Zustand persist middleware docs](https://zustand.docs.pmnd.rs/middlewares/persist)
+- [n8n credentials environment variables](https://docs.n8n.io/hosting/configuration/environment-variables/credentials/)
+- [n8n best practices for AI agents](https://blog.n8n.io/best-practices-for-deploying-ai-agents-in-production/)
