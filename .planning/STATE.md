@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 8 of 12 (Infrastructure + Schema Foundation)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-18 — Completed 08-01 (n8n 2.x confirmed, agent pipeline env vars documented)
+Plan: 3 of 3 in current phase (checkpoint:human-verify pending)
+Status: Awaiting Human Verification
+Last activity: 2026-02-18 — Completed 08-03 Task 1 (runDirectGeneration deprecated, AI providers verified)
 
-Progress: [████████░░░░░░░░░░░░] 42% (v1.0 complete, v1.1 Phase 8 in progress)
+Progress: [█████████░░░░░░░░░░░] 47% (v1.0 complete, v1.1 Phase 8 code complete, verification pending)
 
 ## Performance Metrics
 
@@ -24,14 +24,15 @@ Progress: [████████░░░░░░░░░░░░] 42% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 2
-- Average duration: ~6 min
-- Total execution time: ~12 min
+- Total plans completed: 3
+- Average duration: ~5 min
+- Total execution time: ~14 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 08    | 01   | ~6 min   | 1     | 1     |
 | 08    | 02   | 6 min    | 2     | 6     |
+| 08    | 03   | 2 min    | 1     | 1     |
 
 ## Accumulated Context
 
@@ -51,6 +52,7 @@ Key v1.1 decisions executed (Phase 8):
 - 4 milestones with Japanese labels: strategy/content/assets/packaging
 - brandMemory null until Phase 11 populates
 - n8n upgrade was no-op: VPS already running 2.x with AI Agent nodes available
+- runDirectGeneration kept functional as safety net; deprecation warning added with v1.2 removal timeline
 
 ### Pending Todos
 
@@ -71,5 +73,5 @@ Key v1.1 decisions executed (Phase 8):
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 08-01-PLAN.md (08-01 and 08-02 both done, 08-03 remaining)
-Resume file: .planning/phases/08-infrastructure-schema-foundation/08-03-PLAN.md
+Stopped at: 08-03 Task 1 committed; Task 2 checkpoint:human-verify returned to user
+Resume file: .planning/phases/08-infrastructure-schema-foundation/08-03-PLAN.md (Task 2 pending)
