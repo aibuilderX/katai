@@ -342,6 +342,13 @@ async function runDirectGeneration(
   },
   brandProfile: typeof brandProfiles.$inferSelect
 ) {
+  console.warn(
+    "[DEPRECATED] runDirectGeneration activated. " +
+    "This fallback is deprecated in v1.1 and will be removed in v1.2. " +
+    "Configure N8N_WEBHOOK_URL to use the n8n pipeline instead. " +
+    `Campaign: ${campaignId}`
+  )
+
   try {
     // -----------------------------------------------------------------------
     // Stage 1: Generate platform-specific copy
