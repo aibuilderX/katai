@@ -62,58 +62,58 @@
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import strategic-insight-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "916Lre4ppJHXM9fO",
         "options": {}
       },
       "id": "agent-strategic-insight",
       "name": "Strategic Insight Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [1100, 0],
       "continueOnFail": false,
       "notes": "Execute Sub-workflow: strategic-insight-agent.json. Sub-workflow handles: build-prompt fetch, Anthropic API call, response parsing, quality gate (ORCH-09), progress callbacks, cost tracking. Returns PipelineState with strategicInsight populated. Critical-stop: pipeline halts if this fails."
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import creative-director-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "v65ieTAXTVP7SSPa",
         "options": {}
       },
       "id": "agent-creative-director",
       "name": "Creative Director Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [1540, 0],
       "continueOnFail": false,
       "notes": "Execute Sub-workflow: creative-director-agent.json. Sub-workflow handles: build-prompt fetch (mode-dependent schema), Anthropic API call, response parsing (auto: flat, pro: 2-3 concepts), progress callbacks, cost tracking. Returns PipelineState with creativeDirector populated. Critical-stop: pipeline halts if this fails."
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import copywriter-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "kPZPVtwVKdAM33H1",
         "options": {}
       },
       "id": "agent-copywriter",
       "name": "Copywriter Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [1760, -120],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: copywriter-agent.json. Runs in PARALLEL with Art Director. Sub-workflow handles: build-prompt fetch (register maps, platform norms, copywriting frameworks), Anthropic API call (180s timeout), response parsing (4 variants per platform), progress callbacks, cost tracking. Partial-delivery: pipeline continues if this fails."
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import art-director-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "2XFM7OFX8xailoKS",
         "options": {}
       },
       "id": "agent-art-director",
       "name": "Art Director Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [1760, 120],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: art-director-agent.json. Runs in PARALLEL with Copywriter. Sub-workflow handles: build-prompt fetch (GENX-09 default inference, camera/lens database, Flux constraints, mode-dependent schema), Anthropic API call (180s timeout), response parsing (no negativePrompt). Partial-delivery: pipeline continues if this fails."
     },
     {
@@ -128,58 +128,58 @@
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import jp-localization-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "LecwlmvH4TgejJfh",
         "options": {}
       },
       "id": "agent-jp-localization",
       "name": "JP Localization Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [2200, 0],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: jp-localization-agent.json. Sub-workflow handles: JP quality review via build-prompt + Anthropic API, critique loop (max 2 total attempts), Copywriter revision via build-prompt + Anthropic API if rejected, auto-approve on final attempt with flagged status. Returns PipelineState with jpLocalization populated and potentially revised copywriter.variants."
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import image-generation-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "lWOdWcFFdeaPvF9r",
         "options": {}
       },
       "id": "agent-image-generation",
       "name": "Image Generation Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [2420, 0],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: image-generation-agent.json. Sub-workflow handles: extract Art Director prompts, call /api/internal/generate-images with HMAC, parse response, send progress callbacks, track costs (~9 yen/image). Returns PipelineState with imageGeneration results. Non-fatal: pipeline continues if generation fails."
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import compositing-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "bYV8cMkuLEhfYwTo",
         "options": {}
       },
       "id": "agent-compositing",
       "name": "Compositing Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [2640, 0],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: compositing-agent.json. Sub-workflow handles: extract generated images + copy variant A, call /api/internal/composite with HMAC, overlay Japanese text via Sharp + node-canvas + BudouX, send progress callbacks. Returns PipelineState with compositing results. Non-fatal: base images still available without compositing."
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import resize-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "f3s0fuunFBBPrCBH",
         "options": {}
       },
       "id": "agent-platform-resize",
       "name": "Platform Resize Agent",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [2860, 0],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: resize-agent.json. Sub-workflow handles: extract platforms from brief + source assets, call /api/internal/resize with HMAC, smart crop or letterbox based on aspect ratio, upload to Supabase, send progress callbacks. Returns PipelineState with platformResize results. Non-fatal: composited images still available without resize."
     },
     {
@@ -204,8 +204,8 @@
     },
     {
       "parameters": {
-        "source": "parameter",
-        "workflowJson": "={{ /* Import video-pipeline-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "source": "database",
+        "workflowId": "6Gx8don549sVraC7",
         "options": {
           "waitForSubWorkflow": false
         }
@@ -213,9 +213,9 @@
       "id": "agent-video-pipeline",
       "name": "Video Pipeline Agent (Async)",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [3520, 0],
-      "continueOnFail": true,
+      "onError": "continueRegularOutput",
       "notes": "Execute Sub-workflow: video-pipeline-agent.json with waitForSubWorkflow: false (ASYNC). The orchestrator does NOT wait for video generation. Campaign is already marked complete with copy + images. Video assets arrive later via the sub-workflow's own callbacks to the Next.js dashboard (Supabase Realtime)."
     }
   ],
