@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9.1 of 12 (Agent Prompt Engineering + Photorealistic Output)
-Plan: 1 of 5 in current phase (Plan 01 complete — shared data modules and pipeline types)
-Status: Phase 9.1 Executing — Plan 01 complete, Plans 02-05 pending
-Last activity: 2026-02-19 — Plan 01 complete (shared frameworks, register map, platform norms, flux techniques, quality checklist, agent config, pipeline type updates)
+Plan: 4 of 5 in current phase (Plan 04 complete — Art Director meta-prompt with self-critique)
+Status: Phase 9.1 Executing — Plans 01, 04 complete, Plans 02-03, 05 pending
+Last activity: 2026-02-19 — Plan 04 complete (Art Director meta-prompt system with category-aware camera/lens, self-critique checklist, skin realism counters, Flux Raw Mode, Japanese defaults)
 
 Progress: [█████████░░░░░░░░░░░] 49% (v1.0 complete, v1.1 Phase 8 code complete, Phase 9.1 Plan 01 complete)
 
@@ -24,9 +24,9 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~5 min
-- Total execution time: ~21 min
+- Total execution time: ~25 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -34,6 +34,7 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 | 08    | 02   | 6 min    | 2     | 6     |
 | 08    | 03   | 2 min    | 1     | 1     |
 | 09.1  | 01   | 7 min    | 2     | 8     |
+| 09.1  | 04   | 4 min    | 1     | 1     |
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Key v1.1 decisions executed (Phase 9.1):
 - negativePrompt removed from ArtDirectorOutput — Flux 1.1 Pro Ultra does not support it
 - Temperature gradient 0.2-0.7 from analytical to creative agents
 - All new pipeline type fields are optional for backward compatibility
+- Art Director self-critique uses chain-of-thought within single call grounded by 8-item checklist (not separate evaluation call)
+- 3 few-shot examples (cosmetics, food, fashion) for Art Director demonstrating complete tool output
+- Pro mode tool schema uses variations wrapper with variationTheme labels
 
 ### Pending Todos
 
@@ -86,5 +90,5 @@ Key v1.1 decisions executed (Phase 9.1):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09.1-01-PLAN.md (shared data modules and pipeline types)
-Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-01-SUMMARY.md
+Stopped at: Completed 09.1-04-PLAN.md (Art Director meta-prompt with self-critique)
+Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-04-SUMMARY.md
