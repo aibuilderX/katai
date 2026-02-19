@@ -1,0 +1,195 @@
+{
+  "name": "Creative Director Agent - Sub-workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// POST agentStep callback to Next.js with HMAC signature\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'creative_director',\n    labelJa: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u8a2d\\u8a08\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress - Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/build-prompt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ (function() { const crypto = require('crypto'); const body = JSON.stringify({ agentName: 'creativeDirector', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { strategicInsight: $json.pipelineState.strategicInsight } }); return crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(body).digest('hex'); })() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ agentName: 'creativeDirector', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { strategicInsight: $json.pipelineState.strategicInsight } }) }}",
+        "options": {
+          "timeout": 10000,
+          "fullResponse": false
+        }
+      },
+      "id": "fetch-prompt",
+      "name": "Fetch Prompt from Build-Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "onError": "stopWorkflow",
+      "notes": "Calls /api/internal/build-prompt with agentName 'creativeDirector' and upstreamOutputs.strategicInsight. Endpoint handles mode-dependent tool schema selection (auto: flat, pro: 2-3 concepts array). NO inline prompt content."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for Anthropic API call\n// Merges build-prompt response with pipeline state for the HTTP Request node\n\nconst promptResponse = $input.first().json;\nconst triggerData = $('Execute Workflow Trigger').first().json;\n\n// Build the Anthropic API request body\nconst anthropicBody = {\n  model: triggerData.agentConfig?.creativeDirector?.model || 'claude-opus-4-6',\n  max_tokens: promptResponse.maxTokens,\n  temperature: promptResponse.temperature,\n  system: promptResponse.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: promptResponse.userMessage\n    }\n  ],\n  tools: [promptResponse.toolSchema],\n  tool_choice: promptResponse.toolChoice\n};\n\nreturn [{\n  json: {\n    anthropicBody,\n    // Carry forward pipeline data for downstream nodes\n    campaignId: triggerData.campaignId,\n    brief: triggerData.brief,\n    brandProfile: triggerData.brandProfile,\n    agentConfig: triggerData.agentConfig,\n    mode: triggerData.mode,\n    pipelineState: triggerData.pipelineState\n  }\n}];"
+      },
+      "id": "prepare-anthropic",
+      "name": "Prepare Anthropic Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anthropicBody) }}",
+        "options": {
+          "timeout": 120000,
+          "fullResponse": false
+        }
+      },
+      "id": "call-anthropic",
+      "name": "Call Anthropic API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "stopWorkflow",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API Key",
+          "id": "anthropic-api"
+        }
+      },
+      "notes": "Calls Anthropic API with tool-use (deliver_creative_direction). Uses httpHeaderAuth credential (header: x-api-key). Retry once on failure (1 silent retry per ORCH-10)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Anthropic API Response\n// Extract tool_use content block from deliver_creative_direction tool call\n// For pro mode: store all concepts but pipeline continues with first concept\n// Write to pipelineState.creativeDirector\n// Calculate cost entry from token usage\n\nconst response = $input.first().json;\nconst pipelineData = $('Prepare Anthropic Request').first().json;\n\n// Find the tool_use content block\nconst toolUseBlock = response.content?.find(block => block.type === 'tool_use');\n\nif (!toolUseBlock) {\n  throw new Error('No tool_use block found in Anthropic response. Content types: ' + \n    (response.content || []).map(b => b.type).join(', '));\n}\n\nif (toolUseBlock.name !== 'deliver_creative_direction') {\n  throw new Error(`Unexpected tool name: ${toolUseBlock.name}. Expected: deliver_creative_direction`);\n}\n\nconst toolInput = toolUseBlock.input;\nconst mode = pipelineData.mode || 'pro';\n\n// Handle mode-dependent output structure\nlet creativeDirector;\n\nif (mode === 'pro' && toolInput.concepts && Array.isArray(toolInput.concepts)) {\n  // Pro mode: array of 2-3 concepts\n  // Take first concept as the primary for pipeline continuation\n  // Store all concepts in pipelineState for the dashboard\n  const primaryConcept = toolInput.concepts[0];\n  creativeDirector = {\n    concept: primaryConcept.concept,\n    visualConcept: primaryConcept.visualConcept,\n    colorGuidance: primaryConcept.colorGuidance,\n    compositionNotes: primaryConcept.compositionNotes,\n    moodKeywords: primaryConcept.moodKeywords,\n    copyDirection: primaryConcept.copyDirection,\n    platformAdaptations: primaryConcept.platformAdaptations,\n    summaryJa: primaryConcept.summaryJa,\n    // Store all concepts for dashboard display\n    allConcepts: toolInput.concepts\n  };\n} else {\n  // Auto mode: single flat concept\n  creativeDirector = {\n    concept: toolInput.concept,\n    visualConcept: toolInput.visualConcept,\n    colorGuidance: toolInput.colorGuidance,\n    compositionNotes: toolInput.compositionNotes,\n    moodKeywords: toolInput.moodKeywords,\n    copyDirection: toolInput.copyDirection,\n    platformAdaptations: toolInput.platformAdaptations,\n    summaryJa: toolInput.summaryJa\n  };\n}\n\n// Calculate cost entry\nconst usage = response.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\n// Approximate cost in yen (Claude Opus: ~$15/1M input, ~$75/1M output, at ~150 JPY/USD)\nconst costYen = ((inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)) * 150;\n\nconst costEntry = {\n  entryType: 'agent',\n  agentName: 'creative_director',\n  modelUsed: response.model || 'claude-opus-4-6',\n  inputTokens,\n  outputTokens,\n  costYen: Math.round(costYen * 100) / 100,\n  success: true\n};\n\n// Update pipelineState\nconst updatedPipelineState = {\n  ...pipelineData.pipelineState,\n  creativeDirector\n};\n\nreturn [{\n  json: {\n    campaignId: pipelineData.campaignId,\n    brief: pipelineData.brief,\n    brandProfile: pipelineData.brandProfile,\n    agentConfig: pipelineData.agentConfig,\n    mode: pipelineData.mode,\n    pipelineState: updatedPipelineState,\n    costEntry,\n    summaryJa: creativeDirector.summaryJa || ''\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Complete + Cost Entry\n// POST agentStep completion and cost data to Next.js\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'creative_director',\n    labelJa: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u8a2d\\u8a08\\u4e2d',\n    status: 'complete',\n    summaryJa: input.summaryJa || '',\n    completedAt: new Date().toISOString()\n  },\n  costEntries: [input.costEntry]\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\n// Return updated pipeline data (without internal fields)\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    agentConfig: input.agentConfig,\n    mode: input.mode,\n    pipelineState: input.pipelineState\n  }\n}];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress - Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Handler: Critical Stop\n// Sends failure callback with Japanese error message\n// This node is connected via the error output of the main flow\n\nconst crypto = require('crypto');\n\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\n// Get the original trigger data\nlet campaignId = 'unknown';\ntry {\n  campaignId = $('Execute Workflow Trigger').first().json.campaignId || 'unknown';\n} catch (e) {\n  // If trigger data not accessible, use unknown\n}\n\nconst errorMessage = $input.first().json?.error?.message || 'Unknown error in Creative Director agent';\n\nif (callbackUrl && secret) {\n  const payload = {\n    campaignId,\n    status: 'failure',\n    pipelineVersion: 'v1.1',\n    agentStep: {\n      agentName: 'creative_director',\n      labelJa: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u8a2d\\u8a08\\u4e2d',\n      status: 'failed',\n      completedAt: new Date().toISOString()\n    },\n    agentError: {\n      agentName: 'creative_director',\n      timestamp: new Date().toISOString(),\n      message: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u306e\\u65b9\\u5411\\u6027\\u3092\\u751f\\u6210\\u3067\\u304d\\u307e\\u305b\\u3093\\u3067\\u3057\\u305f\\u3002\\u304a\\u624b\\u6570\\u3067\\u3059\\u304c\\u3001\\u3082\\u3046\\u4e00\\u5ea6\\u304a\\u8a66\\u3057\\u304f\\u3060\\u3055\\u3044\\u3002',\n      retryAttempted: true,\n      retrySucceeded: false,\n      isCriticalStop: true\n    },\n    error: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u306e\\u65b9\\u5411\\u6027\\u3092\\u751f\\u6210\\u3067\\u304d\\u307e\\u305b\\u3093\\u3067\\u3057\\u305f\\u3002\\u304a\\u624b\\u6570\\u3067\\u3059\\u304c\\u3001\\u3082\\u3046\\u4e00\\u5ea6\\u304a\\u8a66\\u3057\\u304f\\u3060\\u3055\\u3044\\u3002'\n  };\n\n  const body = JSON.stringify(payload);\n  const signature = crypto\n    .createHmac('sha256', secret)\n    .update(body)\n    .digest('hex');\n\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Signature': signature\n      },\n      body\n    });\n  } catch (e) {\n    console.error(`Failed to send error callback: ${e.message}`);\n  }\n}\n\n// Throw to halt the pipeline (critical-stop)\nthrow new Error(`Creative Director Agent critical-stop: ${errorMessage}`);"
+      },
+      "id": "error-handler",
+      "name": "Error Handler - Critical Stop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "notes": "Critical-stop: sends Japanese error message and halts pipeline. Connected via error outputs from API call nodes."
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress - Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress - Active": {
+      "main": [
+        [
+          { "node": "Fetch Prompt from Build-Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Prompt from Build-Prompt": {
+      "main": [
+        [
+          { "node": "Prepare Anthropic Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Anthropic Request": {
+      "main": [
+        [
+          { "node": "Call Anthropic API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Anthropic API": {
+      "main": [
+        [
+          { "node": "Parse Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          { "node": "Send Progress - Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "description": "Creative Director Agent sub-workflow. Receives PipelineState (with strategicInsight populated) from Master Orchestrator, calls /api/internal/build-prompt for mode-dependent prompt serialization (auto: flat concept, pro: 2-3 concepts), calls Anthropic API with tool-use (deliver_creative_direction), and returns updated PipelineState with creativeDirector populated. Critical-stop agent: pipeline halts after 1 retry if this fails.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio",
+    "notes": "IMPORT INSTRUCTIONS: 1) Ensure Anthropic API Key credential exists (httpHeaderAuth with header 'x-api-key'), 2) Ensure NEXTJS_BASE_URL and NEXTJS_CALLBACK_URL env vars are set, 3) This workflow is called by Master Orchestrator via Execute Sub-workflow node after Strategic Insight quality gate passes."
+  }
+}

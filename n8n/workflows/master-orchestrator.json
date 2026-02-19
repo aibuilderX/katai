@@ -76,14 +76,17 @@
     },
     {
       "parameters": {
-        "jsCode": "// Creative Director Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-02 will replace this with Execute Sub-workflow node.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'creative_director',\n    labelJa: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u8a2d\\u8a08\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import creative-director-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-creative-director",
-      "name": "Creative Director Agent (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Creative Director Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [1540, 0],
-      "continueOnFail": false
+      "continueOnFail": false,
+      "notes": "Execute Sub-workflow: creative-director-agent.json. Sub-workflow handles: build-prompt fetch (mode-dependent schema), Anthropic API call, response parsing (auto: flat, pro: 2-3 concepts), progress callbacks, cost tracking. Returns PipelineState with creativeDirector populated. Critical-stop: pipeline halts if this fails."
     },
     {
       "parameters": {
@@ -209,11 +212,11 @@
     "Strategic Insight Agent": {
       "main": [
         [
-          { "node": "Creative Director Agent (Stub)", "type": "main", "index": 0 }
+          { "node": "Creative Director Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Creative Director Agent (Stub)": {
+    "Creative Director Agent": {
       "main": [
         [
           { "node": "Copywriter Agent (Stub)", "type": "main", "index": 0 },
