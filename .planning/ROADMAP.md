@@ -81,11 +81,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Master orchestrator workflow, AgentStep types, pipelineState column, callback handler, per-agent progress UI, strategy accordion
-- [ ] 09-02-PLAN.md — Strategic Insight agent (Schwartz/LF8/SB7 classification), Creative Director agent, quality gate validation
-- [ ] 09-03-PLAN.md — Copywriter agent, Art Director agent (parallel), JP Localization agent with critique loop (max 2 retries)
-- [ ] 09-04-PLAN.md — Flux image generation via fal.ai, internal API endpoints for compositing and resize
-- [ ] 09-05-PLAN.md — Video/audio/avatar pipeline (async), ZIP download verification, end-to-end pipeline checkpoint
+- [ ] 09-01-PLAN.md — Master orchestrator n8n workflow, AgentStep types, callback handler extension, per-agent progress UI timeline
+- [ ] 09-02-PLAN.md — Strategic Insight agent (Schwartz/LF8/AIDMA/AISAS classification), Creative Director agent, quality gate validation
+- [ ] 09-03-PLAN.md — Copywriter agent, Art Director agent (parallel), JP Localization agent with critique loop (max 2 total attempts)
+- [ ] 09-04-PLAN.md — Internal API endpoints (image generation, compositing, resize), n8n generation sub-workflows
+- [ ] 09-05-PLAN.md — Video/audio/avatar async pipeline, strategy accordion UI, ZIP download, end-to-end pipeline checkpoint
 
 ---
 
@@ -193,13 +193,13 @@ Plans:
 | 5. Workflow & Intelligence | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 6. Billing & Compliance | v1.0 | 4/4 | Complete | 2026-02-09 |
 | 7. Infrastructure & Deployment | v1.0 | 3/3 | Complete | 2026-02-09 |
-| 8. Infrastructure + Schema Foundation | v1.1 | 0/3 | Planned | - |
-| 9. Core Agent Pipeline + Generation Execution | v1.1 | 0/5 | Planned | - |
-| 9.1 Agent Prompt Engineering + Photorealistic Output | v1.1 | 0/5 | Planned | - |
+| 8. Infrastructure + Schema Foundation | v1.1 | 3/3 | Complete | 2026-02-18 |
+| 9. Core Agent Pipeline + Generation Execution | v1.1 | 0/5 | Not started | - |
+| 9.1 Agent Prompt Engineering + Photorealistic Output | v1.1 | 5/5 | Complete | 2026-02-19 |
 | 10. Auto Mode | v1.1 | 0/3 | Not started | - |
 | 11. Brand Memory + Knowledge Base | v1.1 | 0/3 | Not started | - |
 | 12. Compliance Auto-Rewrite + Seedance | v1.1 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-18 after Phase 9 planning*
+*Last updated: 2026-02-19 — Phase 8, 9.1 marked complete*
