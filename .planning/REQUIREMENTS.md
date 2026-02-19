@@ -110,6 +110,7 @@ Requirements for milestone v1.1 (Full Pipeline + Auto Mode). Each maps to roadma
 - **DENH-01**: Visual style memory extracts color/composition preferences from image approval patterns
 - **DENH-02**: Full RAG vector search for Brand Memory (migrate from PostgreSQL JSONB to Qdrant when data volume justifies)
 - **DENH-03**: Seedance 2.0 promoted to primary video provider (pending IP litigation resolution and official API stability)
+- **DENH-04**: ComfyUI Cloud integration as upgraded image generation backend — swap fal.ai direct calls for ComfyUI Cloud workflows (Flux + face restoration + upscaling + IP-Adapter character consistency). Providers: RunComfy, ViewComfy, or Comfy Cloud official. Swap surface is minimal (1 module + 2 consumers). Enables: multi-step image pipelines, custom LoRAs for brand styles, outpainting for platform resize, consistent characters across campaign assets. Evaluated 2026-02-19; deferred because current fal.ai pipeline is sufficient for v1.1 and prompt engineering (Phase 9.1) is backend-agnostic.
 
 ## Out of Scope
 
