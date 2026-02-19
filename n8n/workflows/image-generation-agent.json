@@ -1,0 +1,151 @@
+{
+  "name": "Image Generation Sub-workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "notes": "Receives full pipeline data: campaignId, brief, brandProfile, pipelineState (with artDirector.imagePrompts), mode, agentConfig"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// Notify Next.js that image generation has started\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'image_generation',\n    labelJa: '\\u753b\\u50cf\\u751f\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  await fetch(callbackUrl, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'X-Signature': signature },\n    body\n  });\n} catch (err) {\n  console.warn('[image-gen] Progress callback failed:', err.message);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress: Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Request for Internal Generate-Images API\n// Extracts Art Director image prompts from pipelineState and signs with HMAC\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst pipelineState = input.pipelineState;\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst baseUrl = $env.NEXTJS_BASE_URL;\n\n// Extract image prompts from Art Director output\nconst imagePrompts = pipelineState.artDirector?.imagePrompts || [];\n\nif (imagePrompts.length === 0) {\n  // No image prompts available -- Art Director may have failed (partial delivery)\n  return [{\n    json: {\n      ...input,\n      skipGeneration: true,\n      skipReason: 'No image prompts from Art Director'\n    }\n  }];\n}\n\nconst requestBody = {\n  campaignId: input.campaignId,\n  imagePrompts: imagePrompts,\n  brandProfile: {\n    name: input.brandProfile.name,\n    colors: input.brandProfile.colors || null,\n    toneTags: input.brandProfile.toneTags || null,\n    targetMarket: input.brandProfile.targetMarket || null\n  }\n};\n\nconst bodyStr = JSON.stringify(requestBody);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(bodyStr)\n  .digest('hex');\n\nreturn [{\n  json: {\n    ...input,\n    skipGeneration: false,\n    apiUrl: `${baseUrl}/api/internal/generate-images`,\n    requestBody: bodyStr,\n    hmacSignature: signature\n  }\n}];"
+      },
+      "id": "build-request",
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if generation should be skipped (no image prompts)\n\nconst input = $input.first().json;\n\nif (input.skipGeneration) {\n  // Skip to completion with no images\n  return [{\n    json: {\n      ...input,\n      generationResult: {\n        imageUrls: [],\n        assetIds: [],\n        skipped: true,\n        reason: input.skipReason\n      }\n    }\n  }];\n}\n\n// Proceed with API call\nreturn [{ json: input }];"
+      },
+      "id": "check-skip",
+      "name": "Check Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.apiUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ $json.hmacSignature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ $json.requestBody }}",
+        "options": {
+          "timeout": 300000,
+          "fullResponse": true
+        }
+      },
+      "id": "call-api",
+      "name": "Call Internal API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Response from Internal API\n// Extract imageUrls and assetIds, handle errors gracefully\n\nconst input = $input.first().json;\nconst pipelineData = $node['Check Skip'].json;\n\n// Check if generation was skipped\nif (pipelineData.generationResult?.skipped) {\n  return [{ json: pipelineData }];\n}\n\n// Check for HTTP errors\nlet responseBody;\nif (input.statusCode && input.statusCode !== 200) {\n  console.warn(`[image-gen] API returned HTTP ${input.statusCode}`);\n  const errorBody = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n  \n  return [{\n    json: {\n      ...pipelineData,\n      generationResult: {\n        imageUrls: [],\n        assetIds: [],\n        error: errorBody?.error || `HTTP ${input.statusCode}`,\n        skipped: false\n      }\n    }\n  }];\n}\n\ntry {\n  responseBody = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n} catch (e) {\n  responseBody = input;\n}\n\nconst imageUrls = responseBody.imageUrls || [];\nconst assetIds = responseBody.assetIds || [];\n\nreturn [{\n  json: {\n    ...pipelineData,\n    generationResult: {\n      imageUrls,\n      assetIds,\n      skipped: false\n    }\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress Callback with imageUrls\n// Also sends cost entry for Flux generation\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nconst result = input.generationResult;\nconst imageCount = result.imageUrls?.length || 0;\n\n// Build progress callback with image URLs for the callback handler\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  imageUrls: result.imageUrls || [],\n  agentStep: {\n    agentName: 'image_generation',\n    labelJa: '\\u753b\\u50cf\\u751f\\u6210\\u4e2d',\n    status: result.error ? 'failed' : 'complete',\n    summaryJa: result.error\n      ? `\\u753b\\u50cf\\u751f\\u6210\\u5931\\u6557: ${result.error}`\n      : result.skipped\n        ? '\\u753b\\u50cf\\u30d7\\u30ed\\u30f3\\u30d7\\u306a\\u3057\\uff08\\u30b9\\u30ad\\u30c3\\u30d7\\uff09'\n        : `\\u753b\\u50cf${imageCount}\\u679a\\u751f\\u6210\\u5b8c\\u4e86`,\n    completedAt: new Date().toISOString()\n  },\n  // Cost entry: ~$0.06/image = ~9 yen/image\n  costEntries: imageCount > 0 ? [{\n    entryType: 'provider',\n    providerName: 'fal_ai',\n    operationType: 'flux-1.1-pro-ultra',\n    costYen: imageCount * 9,\n    success: !result.error,\n    errorMessage: result.error || undefined,\n    metadata: {\n      imageCount,\n      model: 'flux-1.1-pro-ultra'\n    }\n  }] : []\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  await fetch(callbackUrl, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'X-Signature': signature },\n    body\n  });\n} catch (err) {\n  console.warn('[image-gen] Progress callback failed:', err.message);\n}\n\n// Return updated pipeline state\nconst updatedPipelineState = {\n  ...input.pipelineState,\n  imageGeneration: {\n    imageUrls: result.imageUrls || [],\n    assetIds: result.assetIds || [],\n    skipped: result.skipped || false,\n    error: result.error || undefined\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    pipelineState: updatedPipelineState\n  }\n}];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress: Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress: Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress: Active": {
+      "main": [
+        [
+          { "node": "Build Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          { "node": "Check Skip", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Check Skip": {
+      "main": [
+        [
+          { "node": "Call Internal API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Internal API": {
+      "main": [
+        [
+          { "node": "Parse Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          { "node": "Send Progress: Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Image Generation sub-workflow. Receives PipelineState with Art Director prompts, calls internal /api/internal/generate-images endpoint, sends progress callbacks, tracks costs. Returns updated PipelineState with image generation results.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio"
+  }
+}

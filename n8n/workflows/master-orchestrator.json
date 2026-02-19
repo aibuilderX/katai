@@ -142,36 +142,45 @@
     },
     {
       "parameters": {
-        "jsCode": "// Image Generation Agent (STUB)\n// Placeholder for image generation sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'image_generation',\n    labelJa: '\\u753b\\u50cf\\u751f\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import image-generation-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-image-generation",
-      "name": "Image Generation (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Image Generation Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [2420, 0],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: image-generation-agent.json. Sub-workflow handles: extract Art Director prompts, call /api/internal/generate-images with HMAC, parse response, send progress callbacks, track costs (~9 yen/image). Returns PipelineState with imageGeneration results. Non-fatal: pipeline continues if generation fails."
     },
     {
       "parameters": {
-        "jsCode": "// Compositing Agent (STUB)\n// Placeholder for text compositing sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'compositing',\n    labelJa: '\\u30c6\\u30ad\\u30b9\\u30c8\\u5408\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import compositing-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-compositing",
-      "name": "Compositing (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Compositing Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [2640, 0],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: compositing-agent.json. Sub-workflow handles: extract generated images + copy variant A, call /api/internal/composite with HMAC, overlay Japanese text via Sharp + node-canvas + BudouX, send progress callbacks. Returns PipelineState with compositing results. Non-fatal: base images still available without compositing."
     },
     {
       "parameters": {
-        "jsCode": "// Platform Resize Agent (STUB)\n// Placeholder for platform resize sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'platform_resize',\n    labelJa: '\\u30ea\\u30b5\\u30a4\\u30ba\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import resize-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-platform-resize",
-      "name": "Platform Resize (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Platform Resize Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [2860, 0],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: resize-agent.json. Sub-workflow handles: extract platforms from brief + source assets, call /api/internal/resize with HMAC, smart crop or letterbox based on aspect ratio, upload to Supabase, send progress callbacks. Returns PipelineState with platformResize results. Non-fatal: composited images still available without resize."
     },
     {
       "parameters": {
@@ -257,25 +266,25 @@
     "JP Localization Agent": {
       "main": [
         [
-          { "node": "Image Generation (Stub)", "type": "main", "index": 0 }
+          { "node": "Image Generation Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Image Generation (Stub)": {
+    "Image Generation Agent": {
       "main": [
         [
-          { "node": "Compositing (Stub)", "type": "main", "index": 0 }
+          { "node": "Compositing Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Compositing (Stub)": {
+    "Compositing Agent": {
       "main": [
         [
-          { "node": "Platform Resize (Stub)", "type": "main", "index": 0 }
+          { "node": "Platform Resize Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Platform Resize (Stub)": {
+    "Platform Resize Agent": {
       "main": [
         [
           { "node": "Video Pipeline (Stub)", "type": "main", "index": 0 }
@@ -297,6 +306,6 @@
     "description": "v1.1 Master Orchestrator workflow. Receives campaign brief via webhook, initializes PipelineState, dispatches to agent sub-workflows sequentially (with Copywriter/Art Director in parallel), and reports progress back to Next.js dashboard.",
     "templateCredsSetupCompleted": true,
     "instanceId": "ai-content-studio",
-    "notes": "IMPORT INSTRUCTIONS: 1) Set N8N_WEBHOOK_SECRET env var, 2) Set NEXTJS_CALLBACK_URL env var pointing to /api/webhooks/n8n, 3) Activate workflow after import. Stub nodes will be replaced by Execute Sub-workflow nodes in Plans 09-02 through 09-05."
+    "notes": "IMPORT INSTRUCTIONS: 1) Set N8N_WEBHOOK_SECRET env var, 2) Set NEXTJS_CALLBACK_URL env var, 3) Set NEXTJS_BASE_URL env var, 4) Activate workflow after import. All agent stubs replaced with Execute Sub-workflow nodes. Only Video Pipeline stub remains (Plan 09-05)."
   }
 }

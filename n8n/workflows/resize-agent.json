@@ -1,0 +1,148 @@
+{
+  "name": "Platform Resize Sub-workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "notes": "Receives full pipeline data: campaignId, brief (with platforms), brandProfile, pipelineState (with imageGeneration or compositing results)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// Notify Next.js that platform resize has started\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'platform_resize',\n    labelJa: '\\u30ea\\u30b5\\u30a4\\u30ba\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  await fetch(callbackUrl, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'X-Signature': signature },\n    body\n  });\n} catch (err) {\n  console.warn('[resize] Progress callback failed:', err.message);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress: Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Request for Internal Resize API\n// Extracts platforms from brief and source assets from compositing (or generation) output\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst pipelineState = input.pipelineState;\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst baseUrl = $env.NEXTJS_BASE_URL;\n\n// Get platforms from brief\nconst platforms = input.brief?.platforms || [];\n\nif (platforms.length === 0) {\n  return [{\n    json: {\n      ...input,\n      skipResize: true,\n      skipReason: 'No platforms specified in brief'\n    }\n  }];\n}\n\n// Get source assets: prefer composited images, fall back to generated images\nconst imageGeneration = pipelineState.imageGeneration || {};\nconst imageUrls = imageGeneration.imageUrls || [];\nconst assetIds = imageGeneration.assetIds || [];\n\nif (imageUrls.length === 0) {\n  return [{\n    json: {\n      ...input,\n      skipResize: true,\n      skipReason: 'No source images available for resize'\n    }\n  }];\n}\n\n// Build source assets array\n// Note: these are the generated base images. Composited images are stored separately\n// in Supabase and can be resized independently if needed.\nconst sourceAssets = imageUrls.map((url, i) => ({\n  id: assetIds[i] || `gen-${i}`,\n  storageKey: url,\n  width: 1024,\n  height: 1024\n}));\n\nconst requestBody = {\n  campaignId: input.campaignId,\n  platforms,\n  sourceAssets,\n  brandBackgroundColor: input.brandProfile?.colors?.background || '#FFFFFF'\n};\n\nconst bodyStr = JSON.stringify(requestBody);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(bodyStr)\n  .digest('hex');\n\nreturn [{\n  json: {\n    ...input,\n    skipResize: false,\n    apiUrl: `${baseUrl}/api/internal/resize`,\n    requestBody: bodyStr,\n    hmacSignature: signature\n  }\n}];"
+      },
+      "id": "build-request",
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if resize should be skipped\n\nconst input = $input.first().json;\n\nif (input.skipResize) {\n  return [{\n    json: {\n      ...input,\n      resizeResult: {\n        platformAssetIds: [],\n        totalResized: 0,\n        skipped: true,\n        reason: input.skipReason\n      }\n    }\n  }];\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "check-skip",
+      "name": "Check Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.apiUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ $json.hmacSignature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ $json.requestBody }}",
+        "options": {
+          "timeout": 120000,
+          "fullResponse": true
+        }
+      },
+      "id": "call-api",
+      "name": "Call Internal API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Response from Internal Resize API\n\nconst input = $input.first().json;\nconst pipelineData = $node['Check Skip'].json;\n\n// Check if resize was skipped\nif (pipelineData.resizeResult?.skipped) {\n  return [{ json: pipelineData }];\n}\n\n// Check for HTTP errors\nif (input.statusCode && input.statusCode !== 200) {\n  const errorBody = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n  return [{\n    json: {\n      ...pipelineData,\n      resizeResult: {\n        platformAssetIds: [],\n        totalResized: 0,\n        error: errorBody?.error || `HTTP ${input.statusCode}`,\n        skipped: false\n      }\n    }\n  }];\n}\n\nlet responseBody;\ntry {\n  responseBody = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n} catch (e) {\n  responseBody = input;\n}\n\nreturn [{\n  json: {\n    ...pipelineData,\n    resizeResult: {\n      platformAssetIds: responseBody.platformAssetIds || [],\n      totalResized: responseBody.totalResized || 0,\n      errors: responseBody.errors || undefined,\n      skipped: false\n    }\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Complete\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nconst result = input.resizeResult;\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'platform_resize',\n    labelJa: '\\u30ea\\u30b5\\u30a4\\u30ba\\u4e2d',\n    status: result.error ? 'failed' : 'complete',\n    summaryJa: result.error\n      ? `\\u30ea\\u30b5\\u30a4\\u30ba\\u5931\\u6557: ${result.error}`\n      : result.skipped\n        ? '\\u30ea\\u30b5\\u30a4\\u30ba\\u30b9\\u30ad\\u30c3\\u30d7\\uff08\\u753b\\u50cf\\u306a\\u3057\\uff09'\n        : `${result.totalResized}\\u30b5\\u30a4\\u30ba\\u30ea\\u30b5\\u30a4\\u30ba\\u5b8c\\u4e86`,\n    completedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  await fetch(callbackUrl, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', 'X-Signature': signature },\n    body\n  });\n} catch (err) {\n  console.warn('[resize] Progress callback failed:', err.message);\n}\n\n// Return updated pipeline state\nconst updatedPipelineState = {\n  ...input.pipelineState,\n  platformResize: {\n    platformAssetIds: result.platformAssetIds || [],\n    totalResized: result.totalResized || 0,\n    skipped: result.skipped || false,\n    error: result.error || undefined\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    pipelineState: updatedPipelineState\n  }\n}];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress: Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress: Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress: Active": {
+      "main": [
+        [
+          { "node": "Build Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          { "node": "Check Skip", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Check Skip": {
+      "main": [
+        [
+          { "node": "Call Internal API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Internal API": {
+      "main": [
+        [
+          { "node": "Parse Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          { "node": "Send Progress: Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Platform Resize sub-workflow. Receives PipelineState with generated/composited images and platform list, calls internal /api/internal/resize endpoint, sends progress callbacks. Returns updated PipelineState with resize results.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio"
+  }
+}
