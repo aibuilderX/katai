@@ -30,6 +30,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [ ] **Phase 8: Infrastructure + Schema Foundation** — n8n 2.x upgrade, database schema additions, error-handling architecture, and v1.0 production verification
 - [ ] **Phase 9: Core Agent Pipeline + Generation Execution** — 7-agent n8n orchestration pipeline end-to-end with all AI provider sub-workflows
+- [ ] **Phase 9.1: Agent Prompt Engineering + Photorealistic Output** — Research-backed prompt optimization for all 5 agents, ultra-realistic character generation
 - [ ] **Phase 10: Auto Mode** — Conversational 5-question brief builder, mode selector, and invisible strategic reasoning
 - [ ] **Phase 11: Brand Memory + Knowledge Base** — Brand signal accumulation, prompt injection, human-readable summary, and NotebookLM MCP
 - [ ] **Phase 12: Compliance Auto-Rewrite + Seedance** — Two-pass compliance engine with diff UI, human confirmation, and Seedance 2.0 as third video model
@@ -77,22 +78,46 @@ Plans:
 4. Any single AI provider failure (e.g. video generation timeout) results in partial campaign delivery — the copy and images are still returned
 5. A completed campaign produces a downloadable ZIP with assets organized by platform
 
-**Plans:** TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] 09-01: Master Orchestrator workflow and sub-workflow architecture (webhook → PipelineState → agent dispatch)
-- [ ] 09-02: Strategic Insight agent (Schwartz/LF8/SB7 classification) and Creative Director agent
-- [ ] 09-03: Copywriter agent, Art Director agent, and JP Localization agent with critique loop (max 2 retries)
-- [ ] 09-04: Generation sub-workflows — Flux image generation and JP text compositing
-- [ ] 09-05: Generation sub-workflows — video (Kling/Runway), ElevenLabs voice, HeyGen avatar, platform resize, ZIP packaging, and circuit breaker fallback routing
+- [ ] 09-01-PLAN.md — Master orchestrator workflow, AgentStep types, pipelineState column, callback handler, per-agent progress UI, strategy accordion
+- [ ] 09-02-PLAN.md — Strategic Insight agent (Schwartz/LF8/SB7 classification), Creative Director agent, quality gate validation
+- [ ] 09-03-PLAN.md — Copywriter agent, Art Director agent (parallel), JP Localization agent with critique loop (max 2 retries)
+- [ ] 09-04-PLAN.md — Flux image generation via fal.ai, internal API endpoints for compositing and resize
+- [ ] 09-05-PLAN.md — Video/audio/avatar pipeline (async), ZIP download verification, end-to-end pipeline checkpoint
 
 ---
+
+### Phase 9.1: Agent Prompt Engineering + Photorealistic Output (INSERTED)
+
+**Goal:** Each of the 5 pipeline agents (Strategic Insight, Creative Director, Copywriter, Art Director, JP Localization) operates with research-backed, battle-tested prompts that extract maximum quality from Claude and Flux — with Art Director producing ultra-realistic photographic characters (skin imperfections, subsurface scattering, natural lighting) and all agents demonstrating measurably superior output compared to naive prompting.
+
+**Depends on:** Phase 9
+
+**Requirements:** ORCH-04, ORCH-05, ORCH-06, ORCH-07, ORCH-08, ORCH-09, ORCH-13, ORCH-14, GENX-09
+
+**Success Criteria** (what must be TRUE):
+1. Art Director image prompts produce photorealistic characters with visible skin texture, pores, imperfections, and natural subsurface scattering — not AI-smooth uncanny valley renders
+2. Strategic Insight agent correctly classifies awareness level and LF8 desires for 5 test briefs spanning different industries and audience types
+3. Copywriter agent produces Japanese copy that passes JP Localization review on first attempt for at least 3 of 5 test briefs
+4. Each agent's prompt is documented with rationale for every design decision (temperature, structure, examples, constraints)
+5. A/B comparison between naive prompts and optimized prompts shows measurable quality improvement across all 5 agents
+
+**Plans:** 5 plans
+
+Plans:
+- [ ] 09.1-01-PLAN.md — Shared data modules (frameworks, register map, platform norms, Flux techniques, quality checklist, agent config) + pipeline type updates
+- [ ] 09.1-02-PLAN.md — Strategic Insight + Creative Director agent prompt builders with tool schemas and few-shot examples
+- [ ] 09.1-03-PLAN.md — Copywriter + JP Localization agent prompt builders with critique loop support
+- [ ] 09.1-04-PLAN.md — Art Director meta-prompt system with self-critique, category-aware prompting, photorealism
+- [ ] 09.1-05-PLAN.md — Test briefs (5 standard + 3 edge), evaluation rubrics, naive prompt baselines for A/B comparison
 
 ### Phase 10: Auto Mode
 
 **Goal:** A solopreneur can start a campaign through a 5-question Japanese conversational brief builder — without filling out a structured form or setting up a brand profile — and receive 3-5 ready-to-post assets as output, with strategic reasoning invisible to them.
 
-**Depends on:** Phase 9
+**Depends on:** Phase 9.1
 
 **Requirements:** AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05, AUTO-06, AUTO-07, AUTO-08, AUTO-09, AUTO-10, AUTO-11
 
@@ -169,11 +194,12 @@ Plans:
 | 6. Billing & Compliance | v1.0 | 4/4 | Complete | 2026-02-09 |
 | 7. Infrastructure & Deployment | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 8. Infrastructure + Schema Foundation | v1.1 | 0/3 | Planned | - |
-| 9. Core Agent Pipeline + Generation Execution | v1.1 | 0/5 | Not started | - |
+| 9. Core Agent Pipeline + Generation Execution | v1.1 | 0/5 | Planned | - |
+| 9.1 Agent Prompt Engineering + Photorealistic Output | v1.1 | 0/5 | Planned | - |
 | 10. Auto Mode | v1.1 | 0/3 | Not started | - |
 | 11. Brand Memory + Knowledge Base | v1.1 | 0/3 | Not started | - |
 | 12. Compliance Auto-Rewrite + Seedance | v1.1 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-18 after Phase 8 planning*
+*Last updated: 2026-02-18 after Phase 9 planning*
