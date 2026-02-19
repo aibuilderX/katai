@@ -184,24 +184,39 @@
     },
     {
       "parameters": {
-        "jsCode": "// Video Pipeline Agent (STUB)\n// Placeholder for video pipeline sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'video_pipeline',\n    labelJa: '\\u52d5\\u753b\\u751f\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "jsCode": "// Final Callback: Send 'complete' status with full pipelineState\n// This marks the campaign as complete with copy + images.\n// Video pipeline runs ASYNCHRONOUSLY after this callback.\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl) {\n  throw new Error('NEXTJS_CALLBACK_URL environment variable is not set');\n}\n\n// Mark pipeline as complete (copy + images delivered)\nconst pipelineState = {\n  ...input.pipelineState,\n  status: 'complete',\n  completedAt: new Date().toISOString()\n};\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'success',\n  pipelineVersion: 'v1.1',\n  pipelineState\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\nconst response = await fetch(callbackUrl, {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'X-Signature': signature\n  },\n  body\n});\n\nif (!response.ok) {\n  console.warn(`Final callback failed: HTTP ${response.status}`);\n}\n\n// Pass through all data for the async video pipeline fork\nreturn [{ json: { ...input, pipelineState } }];"
       },
-      "id": "agent-video-pipeline",
-      "name": "Video Pipeline (Stub)",
+      "id": "final-callback",
+      "name": "Final Callback - Complete (Copy+Images)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3080, 0],
-      "continueOnFail": true
+      "position": [3080, 0]
     },
     {
       "parameters": {
-        "jsCode": "// Final Callback: Send success status with full pipelineState\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl) {\n  throw new Error('NEXTJS_CALLBACK_URL environment variable is not set');\n}\n\n// Mark pipeline as complete\nconst pipelineState = {\n  ...input.pipelineState,\n  status: 'complete',\n  completedAt: new Date().toISOString()\n};\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'success',\n  pipelineVersion: 'v1.1',\n  pipelineState,\n  agentStep: {\n    agentName: 'video_pipeline',\n    labelJa: '\\u52d5\\u753b\\u751f\\u6210\\u4e2d',\n    status: 'complete',\n    completedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\nconst response = await fetch(callbackUrl, {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'X-Signature': signature\n  },\n  body\n});\n\nreturn [{ json: { success: true, pipelineState } }];"
+        "jsCode": "// Prepare data for async Video Pipeline sub-workflow\n// Extracts composited image URLs and copy text needed by the video endpoint\n\nconst input = $input.first().json;\nconst pipelineState = input.pipelineState || {};\n\n// Collect composited image URLs from pipeline results\n// These come from the compositing step stored in campaign assets\nconst compositedImageUrls = input.compositedImageUrls || [];\n\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    pipelineState: pipelineState,\n    compositedImageUrls: compositedImageUrls\n  }\n}];"
       },
-      "id": "final-callback",
-      "name": "Final Callback - Success",
+      "id": "prepare-video-data",
+      "name": "Prepare Video Pipeline Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [3300, 0]
+    },
+    {
+      "parameters": {
+        "source": "parameter",
+        "workflowJson": "={{ /* Import video-pipeline-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "agent-video-pipeline",
+      "name": "Video Pipeline Agent (Async)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [3520, 0],
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: video-pipeline-agent.json with waitForSubWorkflow: false (ASYNC). The orchestrator does NOT wait for video generation. Campaign is already marked complete with copy + images. Video assets arrive later via the sub-workflow's own callbacks to the Next.js dashboard (Supabase Realtime)."
     }
   ],
   "connections": {
@@ -287,14 +302,21 @@
     "Platform Resize Agent": {
       "main": [
         [
-          { "node": "Video Pipeline (Stub)", "type": "main", "index": 0 }
+          { "node": "Final Callback - Complete (Copy+Images)", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Video Pipeline (Stub)": {
+    "Final Callback - Complete (Copy+Images)": {
       "main": [
         [
-          { "node": "Final Callback - Success", "type": "main", "index": 0 }
+          { "node": "Prepare Video Pipeline Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Video Pipeline Data": {
+      "main": [
+        [
+          { "node": "Video Pipeline Agent (Async)", "type": "main", "index": 0 }
         ]
       ]
     }
@@ -306,6 +328,6 @@
     "description": "v1.1 Master Orchestrator workflow. Receives campaign brief via webhook, initializes PipelineState, dispatches to agent sub-workflows sequentially (with Copywriter/Art Director in parallel), and reports progress back to Next.js dashboard.",
     "templateCredsSetupCompleted": true,
     "instanceId": "ai-content-studio",
-    "notes": "IMPORT INSTRUCTIONS: 1) Set N8N_WEBHOOK_SECRET env var, 2) Set NEXTJS_CALLBACK_URL env var, 3) Set NEXTJS_BASE_URL env var, 4) Activate workflow after import. All agent stubs replaced with Execute Sub-workflow nodes. Only Video Pipeline stub remains (Plan 09-05)."
+    "notes": "IMPORT INSTRUCTIONS: 1) Set N8N_WEBHOOK_SECRET env var, 2) Set NEXTJS_CALLBACK_URL env var, 3) Set NEXTJS_BASE_URL env var, 4) Activate workflow after import. All agent stubs replaced with Execute Sub-workflow nodes. Video Pipeline runs ASYNC after campaign completion callback (waitForSubWorkflow: false)."
   }
 }

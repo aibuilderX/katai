@@ -1,0 +1,131 @@
+{
+  "name": "Video Pipeline Agent - Async Generation",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "notes": "Receives PipelineState + image generation results from Master Orchestrator. Called with waitForSubWorkflow: false (async -- orchestrator does not wait)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// Notify dashboard that video pipeline has started\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (callbackUrl && secret) {\n  const payload = {\n    campaignId: input.campaignId,\n    status: 'progress',\n    pipelineVersion: 'v1.1',\n    agentStep: {\n      agentName: 'video_pipeline',\n      labelJa: '\\u52d5\\u753b\\u751f\\u6210\\u4e2d',\n      status: 'active',\n      startedAt: new Date().toISOString()\n    }\n  };\n\n  const body = JSON.stringify(payload);\n  const signature = crypto\n    .createHmac('sha256', secret)\n    .update(body)\n    .digest('hex');\n\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Signature': signature\n      },\n      body\n    });\n  } catch (e) {\n    console.warn('Video pipeline progress callback failed:', e.message);\n  }\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress: Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Request for Video Pipeline Internal API\n// Extract data from PipelineState and image generation results\n\nconst crypto = require('crypto');\nconst input = $input.first().json;\n\nconst pipelineState = input.pipelineState || {};\nconst brief = input.brief || {};\n\n// Extract composited image URLs from pipeline results\n// These are the images from the compositing step\nconst compositedImageUrls = input.compositedImageUrls || [];\n\n// Extract first copy variant text for voiceover script\nconst copywriter = pipelineState.copywriter || {};\nconst variants = copywriter.variants || [];\nconst firstVariant = variants[0];\nconst copyText = firstVariant\n  ? `${firstVariant.headline}\\n${firstVariant.body}`\n  : (brief.objective || '');\n\n// Build the request body\nconst requestBody = {\n  campaignId: input.campaignId,\n  brief: brief,\n  copyText: copyText,\n  compositedImageUrls: compositedImageUrls,\n  platforms: brief.platforms || []\n};\n\n// Sign with HMAC\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst bodyStr = JSON.stringify(requestBody);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(bodyStr)\n  .digest('hex');\n\nreturn [{\n  json: {\n    ...input,\n    requestBody: requestBody,\n    requestBodyStr: bodyStr,\n    hmacSignature: signature\n  }\n}];"
+      },
+      "id": "build-request",
+      "name": "Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/video-pipeline",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ $json.hmacSignature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ $json.requestBodyStr }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "call-api",
+      "name": "Call Video Pipeline API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0],
+      "continueOnFail": true,
+      "notes": "POST to /api/internal/video-pipeline with 300s timeout. Video generation includes voiceover (~5s), video ads (~30-60s each), cinematic (~30s), avatar (~60s). Total can exceed 3 minutes."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Response from Video Pipeline API\n// Extract video, voiceover, and avatar results\n\nconst input = $input.first().json;\n\n// Check for HTTP errors\nif (input.error) {\n  return [{\n    json: {\n      ...input,\n      videoPipelineSuccess: false,\n      videoPipelineError: input.error\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    campaignId: input.campaignId || input.requestBody?.campaignId,\n    pipelineState: input.pipelineState,\n    brief: input.brief,\n    videoPipelineSuccess: true,\n    videos: input.videos || [],\n    voiceover: input.voiceover || null,\n    avatarVideo: input.avatarVideo || null,\n    errors: input.errors || []\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Complete or Failed\n// Notify dashboard of video pipeline final status\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nconst success = input.videoPipelineSuccess;\nconst videoCount = (input.videos || []).length;\nconst hasVoiceover = !!input.voiceover;\nconst hasAvatar = !!input.avatarVideo;\nconst errorCount = (input.errors || []).length;\n\n// Build summary in Japanese\nlet summaryJa = '';\nif (success && videoCount > 0) {\n  const parts = [];\n  parts.push(`\\u52d5\\u753b${videoCount}\\u4ef6`);\n  if (hasVoiceover) parts.push('\\u30ca\\u30ec\\u30fc\\u30b7\\u30e7\\u30f3');\n  if (hasAvatar) parts.push('\\u30a2\\u30d0\\u30bf\\u30fc');\n  summaryJa = `${parts.join(' + ')} \\u751f\\u6210\\u5b8c\\u4e86`;\n  if (errorCount > 0) {\n    summaryJa += ` (${errorCount}\\u4ef6\\u30a8\\u30e9\\u30fc)`;\n  }\n} else if (success && videoCount === 0) {\n  summaryJa = '\\u52d5\\u753b\\u751f\\u6210\\u306b\\u5931\\u6557\\u3057\\u307e\\u3057\\u305f';\n} else {\n  summaryJa = input.videoPipelineError || '\\u52d5\\u753b\\u30d1\\u30a4\\u30d7\\u30e9\\u30a4\\u30f3\\u30a8\\u30e9\\u30fc';\n}\n\nif (callbackUrl && secret) {\n  const payload = {\n    campaignId: input.campaignId,\n    status: 'progress',\n    pipelineVersion: 'v1.1',\n    agentStep: {\n      agentName: 'video_pipeline',\n      labelJa: '\\u52d5\\u753b\\u751f\\u6210\\u4e2d',\n      status: (success && videoCount > 0) ? 'complete' : 'failed',\n      summaryJa: summaryJa,\n      completedAt: new Date().toISOString()\n    }\n  };\n\n  const body = JSON.stringify(payload);\n  const signature = crypto\n    .createHmac('sha256', secret)\n    .update(body)\n    .digest('hex');\n\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Signature': signature\n      },\n      body\n    });\n  } catch (e) {\n    console.warn('Video pipeline completion callback failed:', e.message);\n  }\n}\n\nreturn [{ json: { ...input, summaryJa } }];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress: Complete/Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress: Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress: Active": {
+      "main": [
+        [
+          { "node": "Build Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Request": {
+      "main": [
+        [
+          { "node": "Call Video Pipeline API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Video Pipeline API": {
+      "main": [
+        [
+          { "node": "Parse Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          { "node": "Send Progress: Complete/Failed", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Async video/audio/avatar generation sub-workflow. Called by Master Orchestrator with waitForSubWorkflow: false (async fork). Generates voiceover (ElevenLabs), video ads (Kling/Runway), cinematic video (Runway), and avatar video (HeyGen). Sends its own progress callbacks as assets complete. Does not return to orchestrator.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio"
+  }
+}
