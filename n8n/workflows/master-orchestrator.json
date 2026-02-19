@@ -62,25 +62,17 @@
     },
     {
       "parameters": {
-        "jsCode": "// Strategic Insight Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-02 will replace this with Execute Sub-workflow node.\n\nconst input = $input.first().json;\n\n// Simulate agent step progress callback\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'strategic_insight',\n    labelJa: '\\u6226\\u7565\\u5206\\u6790\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import strategic-insight-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-strategic-insight",
-      "name": "Strategic Insight Agent (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Strategic Insight Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [1100, 0],
-      "continueOnFail": false
-    },
-    {
-      "parameters": {
-        "jsCode": "// Quality Gate: Strategic Insight\n// Validates that strategicInsight output has required fields.\n// Critical-stop: pipeline halts if this fails.\n\nconst input = $input.first().json;\nconst si = input.pipelineState?.strategicInsight;\n\nif (!si) {\n  // Stub mode: no output yet, pass through\n  return [{ json: input }];\n}\n\n// Validate minimum required fields\nconst errors = [];\nif (!si.awarenessLevel) errors.push('Missing awarenessLevel');\nif (!si.lf8Desires || si.lf8Desires.length === 0) errors.push('Missing lf8Desires');\nif (!si.copywritingFramework) errors.push('Missing copywritingFramework');\nif (!si.targetInsight || si.targetInsight.length < 10) errors.push('targetInsight too short (min 10 chars)');\nif (!si.creativeDirection || si.creativeDirection.length < 10) errors.push('creativeDirection too short (min 10 chars)');\n\nif (errors.length > 0) {\n  throw new Error(`Strategic Insight quality gate failed: ${errors.join(', ')}`);\n}\n\nreturn [{ json: input }];"
-      },
-      "id": "quality-gate-si",
-      "name": "Quality Gate - Strategic Insight",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1320, 0],
-      "continueOnFail": false
+      "continueOnFail": false,
+      "notes": "Execute Sub-workflow: strategic-insight-agent.json. Sub-workflow handles: build-prompt fetch, Anthropic API call, response parsing, quality gate (ORCH-09), progress callbacks, cost tracking. Returns PipelineState with strategicInsight populated. Critical-stop: pipeline halts if this fails."
     },
     {
       "parameters": {
@@ -210,18 +202,11 @@
     "Initialize PipelineState": {
       "main": [
         [
-          { "node": "Strategic Insight Agent (Stub)", "type": "main", "index": 0 }
+          { "node": "Strategic Insight Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Strategic Insight Agent (Stub)": {
-      "main": [
-        [
-          { "node": "Quality Gate - Strategic Insight", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Quality Gate - Strategic Insight": {
+    "Strategic Insight Agent": {
       "main": [
         [
           { "node": "Creative Director Agent (Stub)", "type": "main", "index": 0 }

@@ -1,0 +1,213 @@
+{
+  "name": "Strategic Insight Agent - Sub-workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// POST agentStep callback to Next.js with HMAC signature\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  // Non-fatal: log warning and continue\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'strategic_insight',\n    labelJa: '\\u6226\\u7565\\u5206\\u6790\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress - Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/build-prompt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ (function() { const crypto = require('crypto'); const body = JSON.stringify({ agentName: 'strategicInsight', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode }); return crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(body).digest('hex'); })() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ agentName: 'strategicInsight', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode }) }}",
+        "options": {
+          "timeout": 10000,
+          "fullResponse": false
+        }
+      },
+      "id": "fetch-prompt",
+      "name": "Fetch Prompt from Build-Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "onError": "stopWorkflow",
+      "notes": "Calls /api/internal/build-prompt to get system prompt, user message, tool schema, and config from Phase 9.1 TypeScript builders. NO inline prompt content."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for Anthropic API call\n// Merges build-prompt response with pipeline state for the HTTP Request node\n\nconst promptResponse = $input.first().json;\nconst triggerData = $('Execute Workflow Trigger').first().json;\n\n// Build the Anthropic API request body\nconst anthropicBody = {\n  model: triggerData.agentConfig?.strategicInsight?.model || 'claude-opus-4-6',\n  max_tokens: promptResponse.maxTokens,\n  temperature: promptResponse.temperature,\n  system: promptResponse.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: promptResponse.userMessage\n    }\n  ],\n  tools: [promptResponse.toolSchema],\n  tool_choice: promptResponse.toolChoice\n};\n\nreturn [{\n  json: {\n    anthropicBody,\n    // Carry forward pipeline data for downstream nodes\n    campaignId: triggerData.campaignId,\n    brief: triggerData.brief,\n    brandProfile: triggerData.brandProfile,\n    agentConfig: triggerData.agentConfig,\n    mode: triggerData.mode,\n    pipelineState: triggerData.pipelineState\n  }\n}];"
+      },
+      "id": "prepare-anthropic",
+      "name": "Prepare Anthropic Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anthropicBody) }}",
+        "options": {
+          "timeout": 120000,
+          "fullResponse": false
+        }
+      },
+      "id": "call-anthropic",
+      "name": "Call Anthropic API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "stopWorkflow",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API Key",
+          "id": "anthropic-api"
+        }
+      },
+      "notes": "Calls Anthropic API with tool-use. Uses httpHeaderAuth credential (header: x-api-key). Retry once on failure (1 silent retry per ORCH-10)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Anthropic API Response\n// Extract tool_use content block from deliver_strategic_insight tool call\n// Write to pipelineState.strategicInsight\n// Calculate cost entry from token usage\n\nconst response = $input.first().json;\nconst pipelineData = $('Prepare Anthropic Request').first().json;\n\n// Find the tool_use content block\nconst toolUseBlock = response.content?.find(block => block.type === 'tool_use');\n\nif (!toolUseBlock) {\n  throw new Error('No tool_use block found in Anthropic response. Content types: ' + \n    (response.content || []).map(b => b.type).join(', '));\n}\n\nif (toolUseBlock.name !== 'deliver_strategic_insight') {\n  throw new Error(`Unexpected tool name: ${toolUseBlock.name}. Expected: deliver_strategic_insight`);\n}\n\nconst toolInput = toolUseBlock.input;\n\n// Map tool schema field names to PipelineState field names\n// Tool schema uses 'primaryDesires' but PipelineState uses 'lf8Desires'\nconst strategicInsight = {\n  awarenessLevel: toolInput.awarenessLevel,\n  awarenessConfidence: toolInput.awarenessConfidence,\n  lf8Desires: toolInput.primaryDesires,\n  desireConfidence: toolInput.desireConfidence,\n  japaneseDesireNuance: toolInput.japaneseDesireNuance || undefined,\n  copywritingFramework: toolInput.copywritingFramework,\n  frameworkConfidence: toolInput.frameworkConfidence,\n  frameworkRationale: toolInput.frameworkRationale,\n  targetInsight: toolInput.targetInsight,\n  creativeDirection: toolInput.creativeDirection,\n  keyMessages: toolInput.keyMessages,\n  tonalGuidance: toolInput.tonalGuidance,\n  marketContext: toolInput.marketContext || undefined,\n  summaryJa: toolInput.summaryJa\n};\n\n// Calculate cost entry\nconst usage = response.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\n// Approximate cost in yen (Claude Opus: ~$15/1M input, ~$75/1M output, at ~150 JPY/USD)\nconst costYen = ((inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)) * 150;\n\nconst costEntry = {\n  entryType: 'agent',\n  agentName: 'strategic_insight',\n  modelUsed: response.model || 'claude-opus-4-6',\n  inputTokens,\n  outputTokens,\n  costYen: Math.round(costYen * 100) / 100,\n  success: true\n};\n\n// Update pipelineState\nconst updatedPipelineState = {\n  ...pipelineData.pipelineState,\n  strategicInsight\n};\n\nreturn [{\n  json: {\n    campaignId: pipelineData.campaignId,\n    brief: pipelineData.brief,\n    brandProfile: pipelineData.brandProfile,\n    agentConfig: pipelineData.agentConfig,\n    mode: pipelineData.mode,\n    pipelineState: updatedPipelineState,\n    costEntry,\n    summaryJa: toolInput.summaryJa || ''\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quality Gate: Strategic Insight (ORCH-09)\n// Validates that strategicInsight output has all required fields.\n// Critical-stop: pipeline halts if this fails after retry.\n\nconst input = $input.first().json;\nconst si = input.pipelineState?.strategicInsight;\n\nif (!si) {\n  throw new Error('Quality gate failed: strategicInsight is missing from pipelineState');\n}\n\nconst errors = [];\n\n// Validate awarenessLevel\nconst validAwareness = ['unaware', 'problem_aware', 'solution_aware', 'product_aware', 'most_aware'];\nif (!si.awarenessLevel || !validAwareness.includes(si.awarenessLevel)) {\n  errors.push(`awarenessLevel invalid: '${si.awarenessLevel}'. Must be one of: ${validAwareness.join(', ')}`);\n}\n\n// Validate lf8Desires\nif (!si.lf8Desires || !Array.isArray(si.lf8Desires) || si.lf8Desires.length < 1) {\n  errors.push('lf8Desires must have at least 1 entry');\n}\n\n// Validate copywritingFramework\nconst validFrameworks = ['PAS', 'AIDA', 'BAB', 'AIDMA', 'AISAS'];\nif (!si.copywritingFramework || !validFrameworks.includes(si.copywritingFramework)) {\n  errors.push(`copywritingFramework invalid: '${si.copywritingFramework}'. Must be one of: ${validFrameworks.join(', ')} (NOT SB7)`);\n}\n\n// Validate targetInsight\nif (!si.targetInsight || si.targetInsight.length < 10) {\n  errors.push(`targetInsight too short: ${(si.targetInsight || '').length} chars (min 10)`);\n}\n\n// Validate creativeDirection\nif (!si.creativeDirection || si.creativeDirection.length < 10) {\n  errors.push(`creativeDirection too short: ${(si.creativeDirection || '').length} chars (min 10)`);\n}\n\n// Validate keyMessages\nif (!si.keyMessages || !Array.isArray(si.keyMessages) || si.keyMessages.length < 2) {\n  errors.push(`keyMessages must have at least 2 entries, got: ${(si.keyMessages || []).length}`);\n}\n\n// Validate tonalGuidance\nif (!si.tonalGuidance || si.tonalGuidance.length < 5) {\n  errors.push('tonalGuidance is missing or too short');\n}\n\nif (errors.length > 0) {\n  throw new Error(`Strategic Insight quality gate failed:\\n- ${errors.join('\\n- ')}`);\n}\n\n// Quality gate passed\nreturn [{ json: input }];"
+      },
+      "id": "quality-gate",
+      "name": "Quality Gate - Strategic Insight",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0],
+      "notes": "ORCH-09: Validates awarenessLevel, lf8Desires, copywritingFramework (NOT SB7), targetInsight (min 10), creativeDirection (min 10), keyMessages (min 2), tonalGuidance"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Complete + Cost Entry\n// POST agentStep completion and cost data to Next.js\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'strategic_insight',\n    labelJa: '\\u6226\\u7565\\u5206\\u6790\\u4e2d',\n    status: 'complete',\n    summaryJa: input.summaryJa || '',\n    completedAt: new Date().toISOString()\n  },\n  costEntries: [input.costEntry]\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\n// Return updated pipeline data (without internal fields)\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    agentConfig: input.agentConfig,\n    mode: input.mode,\n    pipelineState: input.pipelineState\n  }\n}];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress - Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Handler: Critical Stop\n// Sends failure callback with Japanese error message\n// This node is connected via the error output of the main flow\n\nconst crypto = require('crypto');\n\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\n// Get the original trigger data\nlet campaignId = 'unknown';\ntry {\n  campaignId = $('Execute Workflow Trigger').first().json.campaignId || 'unknown';\n} catch (e) {\n  // If trigger data not accessible, use unknown\n}\n\nconst errorMessage = $input.first().json?.error?.message || 'Unknown error in Strategic Insight agent';\n\nif (callbackUrl && secret) {\n  const payload = {\n    campaignId,\n    status: 'failure',\n    pipelineVersion: 'v1.1',\n    agentStep: {\n      agentName: 'strategic_insight',\n      labelJa: '\\u6226\\u7565\\u5206\\u6790\\u4e2d',\n      status: 'failed',\n      completedAt: new Date().toISOString()\n    },\n    agentError: {\n      agentName: 'strategic_insight',\n      timestamp: new Date().toISOString(),\n      message: '\\u6226\\u7565\\u5206\\u6790\\u3092\\u5b8c\\u4e86\\u3067\\u304d\\u307e\\u305b\\u3093\\u3067\\u3057\\u305f\\u3002\\u304a\\u624b\\u6570\\u3067\\u3059\\u304c\\u3001\\u3082\\u3046\\u4e00\\u5ea6\\u304a\\u8a66\\u3057\\u304f\\u3060\\u3055\\u3044\\u3002',\n      retryAttempted: true,\n      retrySucceeded: false,\n      isCriticalStop: true\n    },\n    error: '\\u6226\\u7565\\u5206\\u6790\\u3092\\u5b8c\\u4e86\\u3067\\u304d\\u307e\\u305b\\u3093\\u3067\\u3057\\u305f\\u3002\\u304a\\u624b\\u6570\\u3067\\u3059\\u304c\\u3001\\u3082\\u3046\\u4e00\\u5ea6\\u304a\\u8a66\\u3057\\u304f\\u3060\\u3055\\u3044\\u3002'\n  };\n\n  const body = JSON.stringify(payload);\n  const signature = crypto\n    .createHmac('sha256', secret)\n    .update(body)\n    .digest('hex');\n\n  try {\n    await fetch(callbackUrl, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Signature': signature\n      },\n      body\n    });\n  } catch (e) {\n    console.error(`Failed to send error callback: ${e.message}`);\n  }\n}\n\n// Throw to halt the pipeline (critical-stop)\nthrow new Error(`Strategic Insight Agent critical-stop: ${errorMessage}`);"
+      },
+      "id": "error-handler",
+      "name": "Error Handler - Critical Stop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "notes": "Critical-stop: sends Japanese error message and halts pipeline. Connected via error outputs from API call and quality gate nodes."
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress - Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress - Active": {
+      "main": [
+        [
+          { "node": "Fetch Prompt from Build-Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Prompt from Build-Prompt": {
+      "main": [
+        [
+          { "node": "Prepare Anthropic Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Anthropic Request": {
+      "main": [
+        [
+          { "node": "Call Anthropic API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Anthropic API": {
+      "main": [
+        [
+          { "node": "Parse Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          { "node": "Quality Gate - Strategic Insight", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Quality Gate - Strategic Insight": {
+      "main": [
+        [
+          { "node": "Send Progress - Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "description": "Strategic Insight Agent sub-workflow. Receives PipelineState from Master Orchestrator, calls /api/internal/build-prompt for prompt serialization, calls Anthropic API with tool-use (deliver_strategic_insight), validates output via quality gate (ORCH-09), and returns updated PipelineState with strategicInsight populated. Critical-stop agent: pipeline halts after 1 retry if this fails.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio",
+    "notes": "IMPORT INSTRUCTIONS: 1) Ensure Anthropic API Key credential exists (httpHeaderAuth with header 'x-api-key'), 2) Ensure NEXTJS_BASE_URL and NEXTJS_CALLBACK_URL env vars are set, 3) This workflow is called by Master Orchestrator via Execute Sub-workflow node."
+  }
+}
