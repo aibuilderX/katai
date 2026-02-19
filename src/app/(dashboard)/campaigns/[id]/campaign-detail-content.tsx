@@ -14,6 +14,7 @@ import { CopyTab } from "@/components/campaign/copy-tab"
 import { ImageTab } from "@/components/campaign/image-tab"
 import { PlatformGridView } from "@/components/campaign/platform-grid-view"
 import { VideoTab } from "@/components/campaign/video-tab"
+import { StrategyAccordion } from "@/components/campaign/strategy-accordion"
 import { DownloadButton } from "@/components/campaign/download-button"
 import { CampaignSidebar } from "@/components/campaign/campaign-sidebar"
 import { GenerationProgress } from "@/components/campaign/generation-progress"
@@ -235,6 +236,13 @@ export function CampaignDetailContent({
           </Link>
         </div>
       </div>
+
+      {/* Strategy accordion (v1.1 pipeline only) */}
+      {campaign.progress?.pipelineState?.strategicInsight && (
+        <StrategyAccordion
+          strategicInsight={campaign.progress.pipelineState.strategicInsight}
+        />
+      )}
 
       {/* Main content + sidebar layout */}
       <div className="flex flex-col gap-8 lg:flex-row">
