@@ -1,0 +1,546 @@
+{
+  "name": "JP Localization Agent - Sub-workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// POST agentStep callback to Next.js with HMAC signature\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'jp_localization',\n    labelJa: 'JP\\u54c1\\u8cea\\u78ba\\u8a8d\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress - Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize Loop State\n// Set attempt count, max attempts, and store original copy variants\n\nconst input = $input.first().json;\n\nreturn [{\n  json: {\n    ...input,\n    loopState: {\n      attemptCount: 1,\n      maxAttempts: 2,\n      originalCopyVariants: input.pipelineState?.copywriter?.variants || [],\n      critiqueHistory: [],\n      allCostEntries: []\n    }\n  }\n}];"
+      },
+      "id": "init-loop",
+      "name": "Initialize Loop State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/build-prompt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ (function() { const crypto = require('crypto'); const body = JSON.stringify({ agentName: 'jpLocalization', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { copywriter: $json.pipelineState.copywriter } }); return crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(body).digest('hex'); })() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ agentName: 'jpLocalization', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { copywriter: $json.pipelineState.copywriter } }) }}",
+        "options": {
+          "timeout": 10000,
+          "fullResponse": false
+        }
+      },
+      "id": "fetch-review-prompt",
+      "name": "Fetch Review Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0],
+      "onError": "continueRegularOutput",
+      "notes": "Calls /api/internal/build-prompt with agentName 'jpLocalization'. Endpoint handles all 5 weighted evaluation criteria (naturalness 30%, register 25%, persuasiveness 20%, cultural 15%, platform 10%), max 5 issues per review, compliance flagging. NO inline prompt content."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for Anthropic API call (Review #1)\n// Merges build-prompt response with pipeline state\n\nconst promptResponse = $input.first().json;\nconst triggerData = $('Initialize Loop State').first().json;\n\nif (promptResponse.error || !promptResponse.systemPrompt) {\n  throw new Error('Build-prompt fetch failed: ' + (promptResponse.error || 'No systemPrompt in response'));\n}\n\nconst anthropicBody = {\n  model: triggerData.agentConfig?.jpLocalization?.model || 'claude-opus-4-6',\n  max_tokens: promptResponse.maxTokens,\n  temperature: promptResponse.temperature,\n  system: promptResponse.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: promptResponse.userMessage\n    }\n  ],\n  tools: [promptResponse.toolSchema],\n  tool_choice: promptResponse.toolChoice\n};\n\nreturn [{\n  json: {\n    anthropicBody,\n    campaignId: triggerData.campaignId,\n    brief: triggerData.brief,\n    brandProfile: triggerData.brandProfile,\n    agentConfig: triggerData.agentConfig,\n    mode: triggerData.mode,\n    pipelineState: triggerData.pipelineState,\n    loopState: triggerData.loopState\n  }\n}];"
+      },
+      "id": "prepare-review-1",
+      "name": "Prepare Review #1 Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anthropicBody) }}",
+        "options": {
+          "timeout": 120000,
+          "fullResponse": false
+        }
+      },
+      "id": "call-anthropic-review-1",
+      "name": "Call Anthropic - Review #1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API Key",
+          "id": "anthropic-api"
+        }
+      },
+      "notes": "JP Localization Review #1. Timeout 120s. 1 silent retry. Partial-delivery on failure."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Review #1 Response\n// Extract tool_use from deliver_localization_review\n// Determine: approved, rejected (needs revision), or API error\n\nconst response = $input.first().json;\nconst pipelineData = $('Prepare Review #1 Request').first().json;\n\n// Track cost\nconst usage = response.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst costYen = ((inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)) * 150;\n\nconst costEntry = {\n  entryType: 'agent',\n  agentName: 'jp_localization',\n  modelUsed: response.model || 'claude-opus-4-6',\n  inputTokens,\n  outputTokens,\n  costYen: Math.round(costYen * 100) / 100,\n  success: true\n};\n\nconst allCostEntries = [...(pipelineData.loopState.allCostEntries || []), costEntry];\n\n// Check for API error\nif (response.error || response.type === 'error') {\n  // Partial-delivery: treat as auto-approved with flag\n  return [{\n    json: {\n      ...pipelineData,\n      reviewResult: {\n        approved: true,\n        qualityScore: 0,\n        revisionsApplied: 0,\n        localizationNotes: 'API\\u30a8\\u30e9\\u30fc\\u306e\\u305f\\u3081\\u30ec\\u30d3\\u30e5\\u30fc\\u3092\\u30b9\\u30ad\\u30c3\\u30d7',\n        overallNote: '\\u30ec\\u30d3\\u30e5\\u30fc\\u3092\\u5b9f\\u884c\\u3067\\u304d\\u307e\\u305b\\u3093\\u3067\\u3057\\u305f\\u3002\\u8981\\u78ba\\u8a8d\\u3002',\n        flagged: true\n      },\n      loopState: { ...pipelineData.loopState, allCostEntries },\n      reviewDecision: 'approved'\n    }\n  }];\n}\n\n// Find tool_use block\nconst toolUseBlock = response.content?.find(block => block.type === 'tool_use');\n\nif (!toolUseBlock) {\n  // No tool response: auto-approve with flag\n  return [{\n    json: {\n      ...pipelineData,\n      reviewResult: {\n        approved: true,\n        qualityScore: 0,\n        revisionsApplied: 0,\n        localizationNotes: 'tool_use\\u30d6\\u30ed\\u30c3\\u30af\\u304c\\u898b\\u3064\\u304b\\u308a\\u307e\\u305b\\u3093',\n        overallNote: '\\u30ec\\u30d3\\u30e5\\u30fc\\u3092\\u5b9f\\u884c\\u3067\\u304d\\u307e\\u305b\\u3093\\u3067\\u3057\\u305f\\u3002\\u8981\\u78ba\\u8a8d\\u3002',\n        flagged: true\n      },\n      loopState: { ...pipelineData.loopState, allCostEntries },\n      reviewDecision: 'approved'\n    }\n  }];\n}\n\nconst toolInput = toolUseBlock.input;\nconst approved = toolInput.approved === true;\n\n// Build review result\nconst reviewResult = {\n  approved,\n  qualityScore: toolInput.qualityScore || 0,\n  revisionsApplied: 0,\n  localizationNotes: toolInput.localizationNotes || '',\n  issues: toolInput.issues || [],\n  complianceFlags: toolInput.complianceFlags || [],\n  overallNote: toolInput.overallNote || '',\n  summaryJa: toolInput.summaryJa || '',\n  flagged: false\n};\n\n// Decision routing\nlet reviewDecision;\nif (approved) {\n  reviewDecision = 'approved';\n} else {\n  // Not approved: need revision (attempt 1 -> revision -> review 2)\n  reviewDecision = 'needs_revision';\n}\n\nreturn [{\n  json: {\n    ...pipelineData,\n    reviewResult,\n    loopState: {\n      ...pipelineData.loopState,\n      allCostEntries,\n      critiqueHistory: [{\n        attemptNumber: 1,\n        approved,\n        qualityScore: reviewResult.qualityScore,\n        issues: reviewResult.issues,\n        overallNote: reviewResult.overallNote\n      }]\n    },\n    reviewDecision\n  }\n}];"
+      },
+      "id": "parse-review-1",
+      "name": "Parse Review #1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "review-approved",
+              "leftValue": "={{ $json.reviewDecision }}",
+              "rightValue": "approved",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-approved-1",
+      "name": "Review #1 Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1540, 0],
+      "notes": "Routes based on Review #1 result: TRUE = approved (proceed to completion), FALSE = needs revision (enter critique loop)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/build-prompt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ (function() { const crypto = require('crypto'); const body = JSON.stringify({ agentName: 'copywriter', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { strategicInsight: $json.pipelineState.strategicInsight, creativeDirector: $json.pipelineState.creativeDirector }, revisionContext: { attemptNumber: $json.loopState.attemptCount, previousCritique: $json.reviewResult, originalVariants: $json.loopState.originalCopyVariants } }); return crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(body).digest('hex'); })() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ agentName: 'copywriter', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { strategicInsight: $json.pipelineState.strategicInsight, creativeDirector: $json.pipelineState.creativeDirector }, revisionContext: { attemptNumber: $json.loopState.attemptCount, previousCritique: $json.reviewResult, originalVariants: $json.loopState.originalCopyVariants } }) }}",
+        "options": {
+          "timeout": 10000,
+          "fullResponse": false
+        }
+      },
+      "id": "fetch-revision-prompt",
+      "name": "Fetch Copywriter Revision Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 200],
+      "onError": "continueRegularOutput",
+      "notes": "Calls /api/internal/build-prompt with agentName 'copywriter' + revisionContext. Endpoint detects revisionContext and returns the Copywriter revision prompt variant with JP Localization critique embedded. NO inline prompt content."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Copywriter Revision Request\n// Uses revision prompt from build-prompt endpoint\n\nconst promptResponse = $input.first().json;\nconst loopData = $('Parse Review #1').first().json;\n\nif (promptResponse.error || !promptResponse.systemPrompt) {\n  // If build-prompt failed, skip revision and auto-approve with flag\n  return [{\n    json: {\n      ...loopData,\n      revisionSkipped: true\n    }\n  }];\n}\n\nconst anthropicBody = {\n  model: loopData.agentConfig?.copywriter?.model || 'claude-opus-4-6',\n  max_tokens: promptResponse.maxTokens,\n  temperature: promptResponse.temperature,\n  system: promptResponse.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: promptResponse.userMessage\n    }\n  ],\n  tools: [promptResponse.toolSchema],\n  tool_choice: promptResponse.toolChoice\n};\n\nreturn [{\n  json: {\n    ...loopData,\n    anthropicBody,\n    revisionSkipped: false\n  }\n}];"
+      },
+      "id": "prepare-revision",
+      "name": "Prepare Revision Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anthropicBody) }}",
+        "options": {
+          "timeout": 180000,
+          "fullResponse": false
+        }
+      },
+      "id": "call-anthropic-revision",
+      "name": "Call Anthropic - Copywriter Revision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API Key",
+          "id": "anthropic-api"
+        }
+      },
+      "notes": "Copywriter revision call. Timeout 180s (multiple platforms x 4 variants). 1 silent retry."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Revised Copy + Increment Attempt\n// Extract revised variants from Copywriter response\n// Update pipelineState.copywriter with revised variants\n// Then fetch re-review prompt for Review #2\n\nconst response = $input.first().json;\nconst loopData = $('Prepare Revision Request').first().json;\n\n// Track cost for revision call\nconst usage = response.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst costYen = ((inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)) * 150;\n\nconst revisionCostEntry = {\n  entryType: 'agent',\n  agentName: 'copywriter',\n  modelUsed: response.model || 'claude-opus-4-6',\n  inputTokens,\n  outputTokens,\n  costYen: Math.round(costYen * 100) / 100,\n  success: true,\n  metadata: { revision: true, attemptNumber: 1 }\n};\n\nconst allCostEntries = [...(loopData.loopState.allCostEntries || []), revisionCostEntry];\n\n// Check for API error\nif (response.error || response.type === 'error') {\n  // Revision failed: auto-approve with flag on best available version\n  return [{\n    json: {\n      ...loopData,\n      loopState: {\n        ...loopData.loopState,\n        attemptCount: 2,\n        allCostEntries\n      },\n      reviewResult: {\n        ...loopData.reviewResult,\n        approved: true,\n        revisionsApplied: 0,\n        overallNote: '\\u6700\\u5927\\u30ea\\u30d3\\u30b8\\u30e7\\u30f3\\u56de\\u6570\\u306b\\u9054\\u3057\\u307e\\u3057\\u305f\\u3002\\u6700\\u5584\\u306e\\u30d0\\u30fc\\u30b8\\u30e7\\u30f3\\u3067\\u627f\\u8a8d\\u3057\\u307e\\u3059\\u3002',\n        flagged: true\n      },\n      reviewDecision: 'auto_approved'\n    }\n  }];\n}\n\n// Extract revised variants from tool_use\nconst toolUseBlock = response.content?.find(block => block.type === 'tool_use');\n\nif (!toolUseBlock) {\n  // No tool response: auto-approve with flag\n  return [{\n    json: {\n      ...loopData,\n      loopState: {\n        ...loopData.loopState,\n        attemptCount: 2,\n        allCostEntries\n      },\n      reviewResult: {\n        ...loopData.reviewResult,\n        approved: true,\n        revisionsApplied: 0,\n        overallNote: '\\u6700\\u5927\\u30ea\\u30d3\\u30b8\\u30e7\\u30f3\\u56de\\u6570\\u306b\\u9054\\u3057\\u307e\\u3057\\u305f\\u3002\\u6700\\u5584\\u306e\\u30d0\\u30fc\\u30b8\\u30e7\\u30f3\\u3067\\u627f\\u8a8d\\u3057\\u307e\\u3059\\u3002',\n        flagged: true\n      },\n      reviewDecision: 'auto_approved'\n    }\n  }];\n}\n\nconst toolInput = toolUseBlock.input;\n\n// Parse revised copy variants (same logic as Copywriter agent)\nconst revisedVariants = (toolInput.platforms || toolInput.variants || []).flatMap(platform => {\n  if (platform.variants) {\n    return platform.variants.map(v => ({\n      platform: platform.platform || v.platform,\n      variantLabel: v.variantLabel,\n      headline: v.headline,\n      body: v.body,\n      cta: v.cta,\n      hashtags: v.hashtags || [],\n      register: v.register,\n      rationaleNotes: v.rationaleNotes || undefined\n    }));\n  }\n  return [{\n    platform: platform.platform,\n    variantLabel: platform.variantLabel,\n    headline: platform.headline,\n    body: platform.body,\n    cta: platform.cta,\n    hashtags: platform.hashtags || [],\n    register: platform.register,\n    rationaleNotes: platform.rationaleNotes || undefined\n  }];\n});\n\n// Update pipelineState with revised variants\nconst updatedPipelineState = {\n  ...loopData.pipelineState,\n  copywriter: { variants: revisedVariants }\n};\n\nreturn [{\n  json: {\n    campaignId: loopData.campaignId,\n    brief: loopData.brief,\n    brandProfile: loopData.brandProfile,\n    agentConfig: loopData.agentConfig,\n    mode: loopData.mode,\n    pipelineState: updatedPipelineState,\n    loopState: {\n      ...loopData.loopState,\n      attemptCount: 2,\n      allCostEntries,\n      critiqueHistory: loopData.loopState.critiqueHistory\n    },\n    reviewResult: loopData.reviewResult,\n    reviewDecision: 'pending_re_review'\n  }\n}];"
+      },
+      "id": "parse-revision",
+      "name": "Parse Revised Copy + Increment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-re-review",
+              "leftValue": "={{ $json.reviewDecision }}",
+              "rightValue": "pending_re_review",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-needs-re-review",
+      "name": "Needs Re-review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2640, 200],
+      "notes": "Routes: TRUE = revision succeeded, needs JP re-review (Review #2), FALSE = auto-approved (revision failed, skip re-review)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/build-prompt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ (function() { const crypto = require('crypto'); const body = JSON.stringify({ agentName: 'jpLocalization', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { copywriter: $json.pipelineState.copywriter }, revisionContext: { attemptNumber: $json.loopState.attemptCount, critiqueHistory: $json.loopState.critiqueHistory } }); return crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(body).digest('hex'); })() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ agentName: 'jpLocalization', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { copywriter: $json.pipelineState.copywriter }, revisionContext: { attemptNumber: $json.loopState.attemptCount, critiqueHistory: $json.loopState.critiqueHistory } }) }}",
+        "options": {
+          "timeout": 10000,
+          "fullResponse": false
+        }
+      },
+      "id": "fetch-re-review-prompt",
+      "name": "Fetch Re-review Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 200],
+      "onError": "continueRegularOutput",
+      "notes": "Calls /api/internal/build-prompt with jpLocalization + revisionContext (includes critiqueHistory from Review #1). This is attempt 2 (final) — auto-approves on this attempt."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Review #2 Request\n// This is the final review (attempt 2 of 2)\n// Per Phase 9.1: auto-approves on this attempt to prevent pipeline stall\n\nconst promptResponse = $input.first().json;\nconst loopData = $('Parse Revised Copy + Increment').first().json;\n\nif (promptResponse.error || !promptResponse.systemPrompt) {\n  // Build-prompt failed: auto-approve with flag\n  return [{\n    json: {\n      ...loopData,\n      reviewResult: {\n        approved: true,\n        qualityScore: loopData.reviewResult?.qualityScore || 0,\n        revisionsApplied: 1,\n        localizationNotes: '\\u30ea\\u30d3\\u30e5\\u30fc\\u30d7\\u30ed\\u30f3\\u30d7\\u30c8\\u53d6\\u5f97\\u5931\\u6557',\n        overallNote: '\\u6700\\u5927\\u30ea\\u30d3\\u30b8\\u30e7\\u30f3\\u56de\\u6570\\u306b\\u9054\\u3057\\u307e\\u3057\\u305f\\u3002\\u6700\\u5584\\u306e\\u30d0\\u30fc\\u30b8\\u30e7\\u30f3\\u3067\\u627f\\u8a8d\\u3057\\u307e\\u3059\\u3002',\n        flagged: true\n      },\n      reviewDecision: 'auto_approved'\n    }\n  }];\n}\n\nconst anthropicBody = {\n  model: loopData.agentConfig?.jpLocalization?.model || 'claude-opus-4-6',\n  max_tokens: promptResponse.maxTokens,\n  temperature: promptResponse.temperature,\n  system: promptResponse.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: promptResponse.userMessage\n    }\n  ],\n  tools: [promptResponse.toolSchema],\n  tool_choice: promptResponse.toolChoice\n};\n\nreturn [{\n  json: {\n    ...loopData,\n    anthropicBody\n  }\n}];"
+      },
+      "id": "prepare-review-2",
+      "name": "Prepare Review #2 Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anthropicBody) }}",
+        "options": {
+          "timeout": 120000,
+          "fullResponse": false
+        }
+      },
+      "id": "call-anthropic-review-2",
+      "name": "Call Anthropic - Review #2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3300, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API Key",
+          "id": "anthropic-api"
+        }
+      },
+      "notes": "JP Localization Review #2 (final attempt). Auto-approves regardless of result to prevent pipeline stall."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Review #2 Response (Final Attempt)\n// This is attempt 2 (max): AUTO-APPROVE regardless of result\n// Per Phase 9.1: auto-approve on final attempt with best available version\n\nconst response = $input.first().json;\nconst loopData = $('Prepare Review #2 Request').first().json;\n\n// Track cost for review #2\nconst usage = response.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst costYen = ((inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)) * 150;\n\nconst review2CostEntry = {\n  entryType: 'agent',\n  agentName: 'jp_localization',\n  modelUsed: response.model || 'claude-opus-4-6',\n  inputTokens,\n  outputTokens,\n  costYen: Math.round(costYen * 100) / 100,\n  success: true,\n  metadata: { review: 2 }\n};\n\nconst allCostEntries = [...(loopData.loopState.allCostEntries || []), review2CostEntry];\n\n// Try to extract review result\nlet qualityScore = 0;\nlet issues = [];\nlet overallNote = '';\nlet approved = false;\nlet summaryJa = '';\nlet complianceFlags = [];\nlet localizationNotes = '';\n\nif (!response.error && response.type !== 'error') {\n  const toolUseBlock = response.content?.find(block => block.type === 'tool_use');\n  if (toolUseBlock) {\n    const toolInput = toolUseBlock.input;\n    approved = toolInput.approved === true;\n    qualityScore = toolInput.qualityScore || 0;\n    issues = toolInput.issues || [];\n    overallNote = toolInput.overallNote || '';\n    summaryJa = toolInput.summaryJa || '';\n    complianceFlags = toolInput.complianceFlags || [];\n    localizationNotes = toolInput.localizationNotes || '';\n  }\n}\n\n// AUTO-APPROVE on final attempt regardless of 'approved' value\nconst flagged = !approved; // Flag if JP Localization still rejected\n\nconst finalReviewResult = {\n  approved: true, // Always true on final attempt\n  qualityScore,\n  revisionsApplied: 1,\n  localizationNotes: localizationNotes || '\\u4fee\\u6b631\\u56de\\u5b9f\\u65bd',\n  issues,\n  complianceFlags,\n  overallNote: flagged\n    ? '\\u6700\\u5927\\u30ea\\u30d3\\u30b8\\u30e7\\u30f3\\u56de\\u6570\\u306b\\u9054\\u3057\\u307e\\u3057\\u305f\\u3002\\u6700\\u5584\\u306e\\u30d0\\u30fc\\u30b8\\u30e7\\u30f3\\u3067\\u627f\\u8a8d\\u3057\\u307e\\u3059\\u3002'\n    : (overallNote || ''),\n  summaryJa: flagged\n    ? 'JP\\u78ba\\u8a8d \\u2192 \\u8981\\u78ba\\u8a8d\\u30d5\\u30e9\\u30b0\\u4ed8\\u304d\\u627f\\u8a8d'\n    : (summaryJa || 'JP\\u78ba\\u8a8d \\u2192 \\u4fee\\u6b631\\u56de\\u3001\\u627f\\u8a8d\\u6e08\\u307f'),\n  flagged\n};\n\nreturn [{\n  json: {\n    campaignId: loopData.campaignId,\n    brief: loopData.brief,\n    brandProfile: loopData.brandProfile,\n    agentConfig: loopData.agentConfig,\n    mode: loopData.mode,\n    pipelineState: loopData.pipelineState,\n    loopState: {\n      ...loopData.loopState,\n      allCostEntries,\n      critiqueHistory: [\n        ...loopData.loopState.critiqueHistory,\n        {\n          attemptNumber: 2,\n          approved,\n          qualityScore,\n          issues,\n          overallNote\n        }\n      ]\n    },\n    reviewResult: finalReviewResult,\n    reviewDecision: 'approved'\n  }\n}];"
+      },
+      "id": "parse-review-2",
+      "name": "Parse Review #2 (Auto-Approve)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Finalize JP Localization Output\n// Write jpLocalization to pipelineState\n// Determine final status (complete vs flagged)\n// Collect all cost entries from the loop\n\nconst input = $input.first().json;\nconst reviewResult = input.reviewResult;\n\n// Build jpLocalization output for pipelineState\nconst jpLocalization = {\n  approved: reviewResult.approved,\n  revisionsApplied: reviewResult.revisionsApplied || 0,\n  localizationNotes: reviewResult.localizationNotes || '',\n  qualityScore: reviewResult.qualityScore || 0,\n  issues: reviewResult.issues || [],\n  complianceFlags: reviewResult.complianceFlags || [],\n  overallNote: reviewResult.overallNote || '',\n  summaryJa: reviewResult.summaryJa || ''\n};\n\n// Update pipelineState\nconst updatedPipelineState = {\n  ...input.pipelineState,\n  jpLocalization\n};\n\n// Determine summary for progress callback\nconst revisionsApplied = jpLocalization.revisionsApplied;\nconst flagged = reviewResult.flagged === true;\n\nlet summaryJa;\nif (flagged) {\n  summaryJa = 'JP\\u78ba\\u8a8d \\u2192 \\u8981\\u78ba\\u8a8d\\u30d5\\u30e9\\u30b0\\u4ed8\\u304d\\u627f\\u8a8d';\n} else if (revisionsApplied > 0) {\n  summaryJa = `JP\\u78ba\\u8a8d \\u2192 \\u4fee\\u6b63${revisionsApplied}\\u56de\\u3001\\u627f\\u8a8d\\u6e08\\u307f`;\n} else {\n  summaryJa = 'JP\\u78ba\\u8a8d \\u2192 \\u627f\\u8a8d\\u6e08\\u307f';\n}\n\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    agentConfig: input.agentConfig,\n    mode: input.mode,\n    pipelineState: updatedPipelineState,\n    allCostEntries: input.loopState?.allCostEntries || [],\n    summaryJa,\n    flagged,\n    revisionsApplied\n  }\n}];"
+      },
+      "id": "finalize",
+      "name": "Finalize JP Localization",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3740, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Complete + All Cost Entries\n// POST agentStep completion with full cost data from all API calls in the loop\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'jp_localization',\n    labelJa: 'JP\\u54c1\\u8cea\\u78ba\\u8a8d\\u4e2d',\n    status: input.flagged ? 'flagged' : 'complete',\n    summaryJa: input.summaryJa || '',\n    completedAt: new Date().toISOString()\n  },\n  costEntries: input.allCostEntries || []\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\n// Return updated pipeline data (without internal loop fields)\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    agentConfig: input.agentConfig,\n    mode: input.mode,\n    pipelineState: input.pipelineState\n  }\n}];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress - Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3960, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress - Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress - Active": {
+      "main": [
+        [
+          { "node": "Initialize Loop State", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Initialize Loop State": {
+      "main": [
+        [
+          { "node": "Fetch Review Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Review Prompt": {
+      "main": [
+        [
+          { "node": "Prepare Review #1 Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Review #1 Request": {
+      "main": [
+        [
+          { "node": "Call Anthropic - Review #1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Anthropic - Review #1": {
+      "main": [
+        [
+          { "node": "Parse Review #1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Review #1": {
+      "main": [
+        [
+          { "node": "Review #1 Approved?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Review #1 Approved?": {
+      "main": [
+        [
+          { "node": "Finalize JP Localization", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Fetch Copywriter Revision Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Copywriter Revision Prompt": {
+      "main": [
+        [
+          { "node": "Prepare Revision Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Revision Request": {
+      "main": [
+        [
+          { "node": "Call Anthropic - Copywriter Revision", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Anthropic - Copywriter Revision": {
+      "main": [
+        [
+          { "node": "Parse Revised Copy + Increment", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Revised Copy + Increment": {
+      "main": [
+        [
+          { "node": "Needs Re-review?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Needs Re-review?": {
+      "main": [
+        [
+          { "node": "Fetch Re-review Prompt", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Finalize JP Localization", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Re-review Prompt": {
+      "main": [
+        [
+          { "node": "Prepare Review #2 Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Review #2 Request": {
+      "main": [
+        [
+          { "node": "Call Anthropic - Review #2", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Anthropic - Review #2": {
+      "main": [
+        [
+          { "node": "Parse Review #2 (Auto-Approve)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Review #2 (Auto-Approve)": {
+      "main": [
+        [
+          { "node": "Finalize JP Localization", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Finalize JP Localization": {
+      "main": [
+        [
+          { "node": "Send Progress - Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "description": "JP Localization Agent sub-workflow with critique loop. Receives PipelineState (with copywriter.variants populated) from Master Orchestrator. Review #1: calls /api/internal/build-prompt for JP localization review prompt, reviews copy via Anthropic API. If rejected and attempt < maxAttempts(2): calls build-prompt for Copywriter revision prompt (with revisionContext), Copywriter revises via Anthropic API, then JP re-reviews (Review #2). Auto-approves on final attempt (attempt 2) to prevent pipeline stall. Flagged as 'needs review' if auto-approved without full approval. All API call costs tracked across the loop.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio",
+    "notes": "IMPORT INSTRUCTIONS: 1) Ensure Anthropic API Key credential exists (httpHeaderAuth with header 'x-api-key'), 2) Ensure NEXTJS_BASE_URL and NEXTJS_CALLBACK_URL env vars are set, 3) This workflow is called by Master Orchestrator via Execute Sub-workflow node after Copywriter/Art Director parallel merge."
+  }
+}

@@ -128,14 +128,17 @@
     },
     {
       "parameters": {
-        "jsCode": "// JP Localization Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-05 will replace this with Execute Sub-workflow node + critique loop.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'jp_localization',\n    labelJa: 'JP\\u54c1\\u8cea\\u78ba\\u8a8d\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import jp-localization-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-jp-localization",
-      "name": "JP Localization Agent (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "JP Localization Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [2200, 0],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: jp-localization-agent.json. Sub-workflow handles: JP quality review via build-prompt + Anthropic API, critique loop (max 2 total attempts), Copywriter revision via build-prompt + Anthropic API if rejected, auto-approve on final attempt with flagged status. Returns PipelineState with jpLocalization populated and potentially revised copywriter.variants."
     },
     {
       "parameters": {
@@ -247,11 +250,11 @@
     "Merge Parallel Branches": {
       "main": [
         [
-          { "node": "JP Localization Agent (Stub)", "type": "main", "index": 0 }
+          { "node": "JP Localization Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "JP Localization Agent (Stub)": {
+    "JP Localization Agent": {
       "main": [
         [
           { "node": "Image Generation (Stub)", "type": "main", "index": 0 }
