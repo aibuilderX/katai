@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9 of 12 (Core Agent Pipeline: Generation & Execution)
-Plan: 1 of 5 in current phase
-Status: Plan 01 complete — Master Orchestrator workflow, per-agent progress, build-prompt endpoint
-Last activity: 2026-02-19 — Plan 01 complete (orchestrator foundation and pipeline infrastructure)
+Plan: 2 of 5 in current phase
+Status: Plan 02 complete — Strategic Insight and Creative Director agent sub-workflows with quality gate
+Last activity: 2026-02-19 — Plan 02 complete (first two agent sub-workflows wired into orchestrator)
 
-Progress: [██████████░░░░░░░░░░] 55% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 1/5)
+Progress: [███████████░░░░░░░░░] 57% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 2/5)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [██████████░░░░░░░░░░] 55% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: ~6 min
-- Total execution time: ~51 min
+- Total execution time: ~56 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -39,6 +39,7 @@ Progress: [██████████░░░░░░░░░░] 55% (v1
 | 09.1  | 03   | 5 min    | 2     | 2     |
 | 09.1  | 05   | 8 min    | 2     | 3     |
 | 09    | 01   | 8 min    | 4     | 7     |
+| 09    | 02   | 5 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Key v1.1 decisions executed (Phase 9):
 - 9 agent steps defined (5 agents + image_generation, compositing, platform_resize, video_pipeline)
 - /api/internal/build-prompt as single source of truth for agent prompts (prevents drift from Phase 9.1 builders)
 - v1.0 flat step display preserved as fallback in progress UI
+- Quality gate inside sub-workflow (not orchestrator) -- sub-workflow returns only validated data
+- Pro mode Creative Director stores allConcepts for dashboard, pipeline uses first concept
+- Tool schema primaryDesires mapped to PipelineState lf8Desires in parse node
 
 ### Pending Todos
 
@@ -111,5 +115,5 @@ Key v1.1 decisions executed (Phase 9):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09-01-PLAN.md (Master Orchestrator foundation + pipeline infrastructure)
-Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-01-SUMMARY.md
+Stopped at: Completed 09-02-PLAN.md (Strategic Insight + Creative Director agent sub-workflows)
+Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-02-SUMMARY.md
