@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9 of 12 (Core Agent Pipeline: Generation & Execution)
-Plan: 4 of 5 in current phase
-Status: Plan 04 complete — Generation pipeline endpoints and sub-workflows (image gen, compositing, resize)
-Last activity: 2026-02-19 — Plan 04 complete (3 internal API endpoints + 3 n8n generation sub-workflows, only Video Pipeline stub remaining)
+Plan: 5 of 5 in current phase (auto tasks complete, checkpoint pending)
+Status: Plan 05 auto tasks complete — Video pipeline, strategy accordion, ZIP verified; awaiting end-to-end checkpoint
+Last activity: 2026-02-19 — Plan 05 auto tasks complete (video pipeline endpoint + n8n async workflow, strategy accordion, ZIP verified)
 
-Progress: [█████████████░░░░░░░] 65% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 4/5)
+Progress: [██████████████░░░░░░] 68% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 5/5 checkpoint pending)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [█████████████░░░░░░░] 65% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: ~6 min
-- Total execution time: ~69 min
+- Total execution time: ~75 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -42,6 +42,7 @@ Progress: [█████████████░░░░░░░] 65% (v1
 | 09    | 02   | 5 min    | 2     | 3     |
 | 09    | 03   | 7 min    | 3     | 4     |
 | 09    | 04   | 6 min    | 2     | 7     |
+| 09    | 05   | 6 min    | 3     | 5     |
 
 ## Accumulated Context
 
@@ -100,6 +101,10 @@ Key v1.1 decisions executed (Phase 9):
 - Per-prompt generation (count=1) enables per-image circuit breaker tracking and partial delivery
 - Copy variant A used for compositing text overlay (consistent with v1.0)
 - Resize targets generated base images (not composited); composited images stored with own asset records
+- Master Orchestrator sends completion callback BEFORE forking video pipeline (copy+images deliver immediately, video arrives later)
+- Video pipeline runs via waitForSubWorkflow: false -- sub-workflow sends its own callbacks, orchestrator does not wait
+- ZIP packager already covers all v1.1 asset types (composited, resized, video, audio, copy variants) -- no modifications needed
+- StrategyAccordion maps awareness/LF8 to plain-language Japanese, never exposes framework names or codes
 
 ### Pending Todos
 
@@ -125,5 +130,5 @@ Key v1.1 decisions executed (Phase 9):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09-04-PLAN.md (Generation pipeline endpoints and sub-workflows)
-Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-04-SUMMARY.md
+Stopped at: 09-05-PLAN.md Task 3 checkpoint:human-verify (end-to-end pipeline verification)
+Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-05-SUMMARY.md
