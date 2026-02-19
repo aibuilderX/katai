@@ -26,7 +26,8 @@ import { campaigns, copyVariants, assets, brandProfiles, campaignCosts } from "@
 import type { CampaignProgress } from "@/lib/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { adminClient } from "@/lib/supabase/admin"
-import type { N8nCallbackPayload, CostEntry } from "@/types/pipeline"
+import type { N8nCallbackPayload, CostEntry, AgentStep } from "@/types/pipeline"
+import { AGENT_STEP_DEFINITIONS } from "@/types/pipeline"
 
 interface CopyVariantPayload {
   platform: string
@@ -72,6 +73,7 @@ interface N8nWebhookPayload {
   error?: string
   // v1.1 fields
   milestone?: N8nCallbackPayload["milestone"]
+  agentStep?: AgentStep
   pipelineState?: N8nCallbackPayload["pipelineState"]
   costEntries?: CostEntry[]
   agentError?: N8nCallbackPayload["agentError"]
@@ -480,6 +482,64 @@ export async function POST(request: Request) {
           progress: {
             ...existingProgress,
             milestones: updatedMilestones,
+          } as CampaignProgress,
+        })
+        .where(eq(campaigns.id, campaignId))
+    }
+
+    // Handle v1.1 per-agent step progress updates
+    if (payload.agentStep) {
+      const currentCampaign = await db
+        .select({ progress: campaigns.progress })
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId))
+        .limit(1)
+
+      const existingProgress = (currentCampaign[0]?.progress ?? {}) as CampaignProgress
+
+      // Initialize agentSteps from definitions if not yet present
+      const agentSteps: AgentStep[] = existingProgress.agentSteps
+        ? [...existingProgress.agentSteps]
+        : AGENT_STEP_DEFINITIONS.map(d => ({ ...d }))
+
+      // Find and merge the agent step update
+      const stepIndex = agentSteps.findIndex(
+        s => s.agentName === payload.agentStep!.agentName
+      )
+      if (stepIndex !== -1) {
+        agentSteps[stepIndex] = {
+          ...agentSteps[stepIndex],
+          ...payload.agentStep,
+        }
+      }
+
+      await db
+        .update(campaigns)
+        .set({
+          progress: {
+            ...existingProgress,
+            agentSteps,
+          } as CampaignProgress,
+        })
+        .where(eq(campaigns.id, campaignId))
+    }
+
+    // Handle v1.1 pipelineState storage on pipeline completion
+    if (payload.pipelineState && (payload.status === "success" || payload.status === "partial")) {
+      const currentCampaign = await db
+        .select({ progress: campaigns.progress })
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId))
+        .limit(1)
+
+      const existingProgress = (currentCampaign[0]?.progress ?? {}) as CampaignProgress
+
+      await db
+        .update(campaigns)
+        .set({
+          progress: {
+            ...existingProgress,
+            pipelineState: payload.pipelineState,
           } as CampaignProgress,
         })
         .where(eq(campaigns.id, campaignId))

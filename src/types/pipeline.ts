@@ -25,6 +25,38 @@ export interface PipelineMilestone {
   error?: string       // Friendly Japanese error message (only for critical-stop failures)
 }
 
+// ===== Agent Steps (Per-Agent Progress) =====
+
+/**
+ * Per-agent step tracking for v1.1 pipeline dashboard.
+ * Each step maps to one agent in the pipeline and provides
+ * Japanese labels and completion summaries for the UI timeline.
+ */
+export interface AgentStep {
+  agentName: "strategic_insight" | "creative_director" | "copywriter" | "art_director" | "jp_localization" | "image_generation" | "compositing" | "platform_resize" | "video_pipeline"
+  labelJa: string
+  status: "pending" | "active" | "complete" | "failed" | "flagged"
+  summaryJa?: string
+  startedAt?: string
+  completedAt?: string
+}
+
+/**
+ * Default agent step definitions with Japanese labels.
+ * Used to initialize the agentSteps array when a v1.1 pipeline starts.
+ */
+export const AGENT_STEP_DEFINITIONS: readonly AgentStep[] = [
+  { agentName: "strategic_insight", labelJa: "戦略分析中", status: "pending" },
+  { agentName: "creative_director", labelJa: "クリエイティブ設計中", status: "pending" },
+  { agentName: "copywriter", labelJa: "コピーライティング中", status: "pending" },
+  { agentName: "art_director", labelJa: "アート設計中", status: "pending" },
+  { agentName: "jp_localization", labelJa: "JP品質確認中", status: "pending" },
+  { agentName: "image_generation", labelJa: "画像生成中", status: "pending" },
+  { agentName: "compositing", labelJa: "テキスト合成中", status: "pending" },
+  { agentName: "platform_resize", labelJa: "リサイズ中", status: "pending" },
+  { agentName: "video_pipeline", labelJa: "動画生成中", status: "pending" },
+] as const
+
 /**
  * Milestone definitions with agent-to-milestone mapping.
  * Claude's discretion: mapping agents to the 4 user-decided milestones.
@@ -306,6 +338,7 @@ export interface N8nCallbackPayload {
 
   // v1.1 fields (new)
   milestone?: PipelineMilestone         // Current milestone update
+  agentStep?: AgentStep                 // Per-agent step progress update
   pipelineState?: PipelineState         // Full pipeline state on completion
   costEntries?: CostEntry[]             // Cost entries to persist
   agentError?: AgentError               // Agent-specific error

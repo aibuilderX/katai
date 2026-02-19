@@ -52,7 +52,10 @@ export interface CampaignProgress {
   currentStep: string
   // v1.1 milestone-based progress (optional -- only present for v1.1 pipeline)
   milestones?: import("@/types/pipeline").PipelineMilestone[]
+  agentSteps?: import("@/types/pipeline").AgentStep[]
   pipelineVersion?: "v1.0" | "v1.1"
+  // v1.1 pipeline state stored on completion (avoids schema migration)
+  pipelineState?: import("@/types/pipeline").PipelineState
 }
 
 export interface ErrorEntry {

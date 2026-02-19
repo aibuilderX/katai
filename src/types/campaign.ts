@@ -14,7 +14,7 @@ export interface CampaignBrief {
   campaignProductInfo?: string
 }
 
-import type { PipelineMilestone } from "@/types/pipeline"
+import type { PipelineMilestone, AgentStep, PipelineState } from "@/types/pipeline"
 
 /**
  * Real-time progress tracking for campaign generation.
@@ -33,7 +33,10 @@ export interface CampaignProgress {
   currentStep: string
   // v1.1 milestone-based progress (optional -- only present for v1.1 pipeline)
   milestones?: PipelineMilestone[]
+  agentSteps?: AgentStep[]
   pipelineVersion?: "v1.0" | "v1.1"
+  // v1.1 pipeline state stored on completion (avoids schema migration)
+  pipelineState?: PipelineState
 }
 
 /**
