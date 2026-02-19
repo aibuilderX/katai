@@ -1,0 +1,305 @@
+{
+  "name": "Master Orchestrator - Campaign Pipeline v1.1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campaign-pipeline",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Campaign Pipeline",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "campaign-pipeline"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"received\": true, \"campaignId\": $json.body.campaignId } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// HMAC-SHA256 Verification\n// Verify X-Signature header against body using N8N_WEBHOOK_SECRET\n\nconst crypto = require('crypto');\n\nconst signature = $input.first().json.headers['x-signature'];\nconst body = JSON.stringify($input.first().json.body);\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!secret) {\n  throw new Error('N8N_WEBHOOK_SECRET environment variable is not set');\n}\n\nif (!signature) {\n  throw new Error('Missing X-Signature header');\n}\n\nconst expectedSignature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\nconst isValid = crypto.timingSafeEqual(\n  Buffer.from(signature, 'hex'),\n  Buffer.from(expectedSignature, 'hex')\n);\n\nif (!isValid) {\n  throw new Error('Invalid HMAC signature');\n}\n\n// Pass through the verified body\nreturn [{ json: $input.first().json.body }];"
+      },
+      "id": "hmac-verify",
+      "name": "HMAC Verification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize PipelineState\n// Extract fields from webhook body and build initial pipeline state\n\nconst input = $input.first().json;\n\nconst pipelineState = {\n  version: 'v1.1',\n  campaignId: input.campaignId,\n  mode: input.mode || 'pro',\n  status: 'running',\n  agentErrors: [],\n  startedAt: new Date().toISOString()\n};\n\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    agentConfig: input.agentConfig,\n    mode: input.mode || 'pro',\n    brandMemory: input.brandMemory || null,\n    pipelineVersion: input.pipelineVersion || 'v1.1',\n    pipelineState\n  }\n}];"
+      },
+      "id": "init-pipeline",
+      "name": "Initialize PipelineState",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Progress Callback Helper\n// Sends progress updates back to Next.js via HMAC-signed POST\n//\n// Usage: Set $json.callbackPayload before this node with the payload to send.\n// The node will sign it and POST to NEXTJS_CALLBACK_URL.\n\nconst crypto = require('crypto');\n\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl) {\n  throw new Error('NEXTJS_CALLBACK_URL environment variable is not set');\n}\n\nconst payload = $input.first().json.callbackPayload;\nif (!payload) {\n  // No callback payload set, pass through\n  return [$input.first()];\n}\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\nconst response = await fetch(callbackUrl, {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'X-Signature': signature\n  },\n  body\n});\n\nif (!response.ok) {\n  console.warn(`Callback failed: HTTP ${response.status}`);\n}\n\n// Pass through pipeline data (excluding callbackPayload)\nconst { callbackPayload: _, ...rest } = $input.first().json;\nreturn [{ json: rest }];"
+      },
+      "id": "callback-helper",
+      "name": "Progress Callback Helper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Strategic Insight Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-02 will replace this with Execute Sub-workflow node.\n\nconst input = $input.first().json;\n\n// Simulate agent step progress callback\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'strategic_insight',\n    labelJa: '\\u6226\\u7565\\u5206\\u6790\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-strategic-insight",
+      "name": "Strategic Insight Agent (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quality Gate: Strategic Insight\n// Validates that strategicInsight output has required fields.\n// Critical-stop: pipeline halts if this fails.\n\nconst input = $input.first().json;\nconst si = input.pipelineState?.strategicInsight;\n\nif (!si) {\n  // Stub mode: no output yet, pass through\n  return [{ json: input }];\n}\n\n// Validate minimum required fields\nconst errors = [];\nif (!si.awarenessLevel) errors.push('Missing awarenessLevel');\nif (!si.lf8Desires || si.lf8Desires.length === 0) errors.push('Missing lf8Desires');\nif (!si.copywritingFramework) errors.push('Missing copywritingFramework');\nif (!si.targetInsight || si.targetInsight.length < 10) errors.push('targetInsight too short (min 10 chars)');\nif (!si.creativeDirection || si.creativeDirection.length < 10) errors.push('creativeDirection too short (min 10 chars)');\n\nif (errors.length > 0) {\n  throw new Error(`Strategic Insight quality gate failed: ${errors.join(', ')}`);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "quality-gate-si",
+      "name": "Quality Gate - Strategic Insight",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Creative Director Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-02 will replace this with Execute Sub-workflow node.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'creative_director',\n    labelJa: '\\u30af\\u30ea\\u30a8\\u30a4\\u30c6\\u30a3\\u30d6\\u8a2d\\u8a08\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-creative-director",
+      "name": "Creative Director Agent (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 0],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Copywriter Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-03 will replace this with Execute Sub-workflow node.\n// NOTE: Runs in parallel with Art Director via branch/merge pattern.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'copywriter',\n    labelJa: '\\u30b3\\u30d4\\u30fc\\u30e9\\u30a4\\u30c6\\u30a3\\u30f3\\u30b0\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-copywriter",
+      "name": "Copywriter Agent (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, -120],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Art Director Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-04 will replace this with Execute Sub-workflow node.\n// NOTE: Runs in parallel with Copywriter via branch/merge pattern.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'art_director',\n    labelJa: '\\u30a2\\u30fc\\u30c8\\u8a2d\\u8a08\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-art-director",
+      "name": "Art Director Agent (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 120],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge Copywriter and Art Director parallel branches\n// Combines outputs from both branches back into single flow.\n\nconst items = $input.all();\n\n// Take the first item's pipeline data (both branches share the same base)\nconst merged = items[0].json;\n\nreturn [{ json: merged }];"
+      },
+      "id": "merge-parallel",
+      "name": "Merge Parallel Branches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// JP Localization Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-05 will replace this with Execute Sub-workflow node + critique loop.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'jp_localization',\n    labelJa: 'JP\\u54c1\\u8cea\\u78ba\\u8a8d\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-jp-localization",
+      "name": "JP Localization Agent (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Image Generation Agent (STUB)\n// Placeholder for image generation sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'image_generation',\n    labelJa: '\\u753b\\u50cf\\u751f\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-image-generation",
+      "name": "Image Generation (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compositing Agent (STUB)\n// Placeholder for text compositing sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'compositing',\n    labelJa: '\\u30c6\\u30ad\\u30b9\\u30c8\\u5408\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-compositing",
+      "name": "Compositing (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Platform Resize Agent (STUB)\n// Placeholder for platform resize sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'platform_resize',\n    labelJa: '\\u30ea\\u30b5\\u30a4\\u30ba\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-platform-resize",
+      "name": "Platform Resize (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Video Pipeline Agent (STUB)\n// Placeholder for video pipeline sub-workflow.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'video_pipeline',\n    labelJa: '\\u52d5\\u753b\\u751f\\u6210\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+      },
+      "id": "agent-video-pipeline",
+      "name": "Video Pipeline (Stub)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final Callback: Send success status with full pipelineState\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl) {\n  throw new Error('NEXTJS_CALLBACK_URL environment variable is not set');\n}\n\n// Mark pipeline as complete\nconst pipelineState = {\n  ...input.pipelineState,\n  status: 'complete',\n  completedAt: new Date().toISOString()\n};\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'success',\n  pipelineVersion: 'v1.1',\n  pipelineState,\n  agentStep: {\n    agentName: 'video_pipeline',\n    labelJa: '\\u52d5\\u753b\\u751f\\u6210\\u4e2d',\n    status: 'complete',\n    completedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\nconst response = await fetch(callbackUrl, {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'X-Signature': signature\n  },\n  body\n});\n\nreturn [{ json: { success: true, pipelineState } }];"
+      },
+      "id": "final-callback",
+      "name": "Final Callback - Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, 0]
+    }
+  ],
+  "connections": {
+    "Webhook - Campaign Pipeline": {
+      "main": [
+        [
+          { "node": "Respond to Webhook", "type": "main", "index": 0 },
+          { "node": "HMAC Verification", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HMAC Verification": {
+      "main": [
+        [
+          { "node": "Initialize PipelineState", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Initialize PipelineState": {
+      "main": [
+        [
+          { "node": "Strategic Insight Agent (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Strategic Insight Agent (Stub)": {
+      "main": [
+        [
+          { "node": "Quality Gate - Strategic Insight", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Quality Gate - Strategic Insight": {
+      "main": [
+        [
+          { "node": "Creative Director Agent (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Creative Director Agent (Stub)": {
+      "main": [
+        [
+          { "node": "Copywriter Agent (Stub)", "type": "main", "index": 0 },
+          { "node": "Art Director Agent (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Copywriter Agent (Stub)": {
+      "main": [
+        [
+          { "node": "Merge Parallel Branches", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Art Director Agent (Stub)": {
+      "main": [
+        [
+          { "node": "Merge Parallel Branches", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge Parallel Branches": {
+      "main": [
+        [
+          { "node": "JP Localization Agent (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "JP Localization Agent (Stub)": {
+      "main": [
+        [
+          { "node": "Image Generation (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Image Generation (Stub)": {
+      "main": [
+        [
+          { "node": "Compositing (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Compositing (Stub)": {
+      "main": [
+        [
+          { "node": "Platform Resize (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Platform Resize (Stub)": {
+      "main": [
+        [
+          { "node": "Video Pipeline (Stub)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Video Pipeline (Stub)": {
+      "main": [
+        [
+          { "node": "Final Callback - Success", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "v1.1 Master Orchestrator workflow. Receives campaign brief via webhook, initializes PipelineState, dispatches to agent sub-workflows sequentially (with Copywriter/Art Director in parallel), and reports progress back to Next.js dashboard.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio",
+    "notes": "IMPORT INSTRUCTIONS: 1) Set N8N_WEBHOOK_SECRET env var, 2) Set NEXTJS_CALLBACK_URL env var pointing to /api/webhooks/n8n, 3) Activate workflow after import. Stub nodes will be replaced by Execute Sub-workflow nodes in Plans 09-02 through 09-05."
+  }
+}
