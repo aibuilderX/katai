@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9 of 12 (Core Agent Pipeline: Generation & Execution)
-Plan: 3 of 5 in current phase
-Status: Plan 03 complete — Copywriter, Art Director, JP Localization agent sub-workflows with parallel branching and critique loop
-Last activity: 2026-02-19 — Plan 03 complete (all 5 agent sub-workflows built, 3 remaining asset generation stubs)
+Plan: 4 of 5 in current phase
+Status: Plan 04 complete — Generation pipeline endpoints and sub-workflows (image gen, compositing, resize)
+Last activity: 2026-02-19 — Plan 04 complete (3 internal API endpoints + 3 n8n generation sub-workflows, only Video Pipeline stub remaining)
 
-Progress: [████████████░░░░░░░░] 60% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 3/5)
+Progress: [█████████████░░░░░░░] 65% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 4/5)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [████████████░░░░░░░░] 60% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~6 min
-- Total execution time: ~63 min
+- Total execution time: ~69 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -41,6 +41,7 @@ Progress: [████████████░░░░░░░░] 60% (v1
 | 09    | 01   | 8 min    | 4     | 7     |
 | 09    | 02   | 5 min    | 2     | 3     |
 | 09    | 03   | 7 min    | 3     | 4     |
+| 09    | 04   | 6 min    | 2     | 7     |
 
 ## Accumulated Context
 
@@ -95,6 +96,10 @@ Key v1.1 decisions executed (Phase 9):
 - JP Localization critique loop as sequential nodes (not n8n loop node) for fixed max 2 attempts
 - JP Localization auto-approve sends 'flagged' agentStep status for dashboard differentiation
 - Merge node uses field presence detection for parallel branch combination (order-independent)
+- GENX-08 circuit breaker added at generate-images endpoint level (flux.ts has no providerHealth integration)
+- Per-prompt generation (count=1) enables per-image circuit breaker tracking and partial delivery
+- Copy variant A used for compositing text overlay (consistent with v1.0)
+- Resize targets generated base images (not composited); composited images stored with own asset records
 
 ### Pending Todos
 
@@ -120,5 +125,5 @@ Key v1.1 decisions executed (Phase 9):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09-03-PLAN.md (Copywriter, Art Director, JP Localization agent sub-workflows)
-Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-03-SUMMARY.md
+Stopped at: Completed 09-04-PLAN.md (Generation pipeline endpoints and sub-workflows)
+Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-04-SUMMARY.md
