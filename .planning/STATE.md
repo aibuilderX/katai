@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9.1 of 12 (Agent Prompt Engineering + Photorealistic Output)
-Plan: 4 of 5 in current phase (Plans 01, 02, 04 complete — shared modules, strategic/creative prompts, art director)
-Status: Phase 9.1 Executing — Plans 01, 02, 04 complete, Plans 03, 05 pending
-Last activity: 2026-02-19 — Plan 02 complete (Strategic Insight + Creative Director prompt builders with tool schemas and few-shot examples)
+Plan: 5 of 5 in current phase (Plans 01, 02, 03, 04 complete — shared modules, all 4 agent prompt builders)
+Status: Phase 9.1 Executing — Plans 01-04 complete, Plan 05 (evaluation) pending
+Last activity: 2026-02-19 — Plan 03 complete (Copywriter + JP Localization prompt builders with critique loop)
 
 Progress: [█████████░░░░░░░░░░░] 49% (v1.0 complete, v1.1 Phase 8 code complete, Phase 9.1 Plan 01 complete)
 
@@ -24,9 +24,9 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: ~5 min
-- Total execution time: ~30 min
+- Total execution time: ~35 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -36,6 +36,7 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 | 09.1  | 01   | 7 min    | 2     | 8     |
 | 09.1  | 02   | 5 min    | 2     | 2     |
 | 09.1  | 04   | 4 min    | 1     | 1     |
+| 09.1  | 03   | 5 min    | 2     | 2     |
 
 ## Accumulated Context
 
@@ -68,6 +69,10 @@ Key v1.1 decisions executed (Phase 9.1):
 - Pro mode tool schema uses variations wrapper with variationTheme labels
 - Strategic Insight: 1 few-shot example (analytical agent); Creative Director: 2 few-shot examples (creative agent needs range)
 - Creative Director auto/pro mode uses different tool schema structures (flat object vs. array wrapper) with selector function
+- Copywriter system prompt in English, output in Japanese (Claude reasons best in English, 96.9% relative JP performance)
+- Max 5 issues per JP Localization review (LLMs struggle to address more than ~5 in a single revision pass)
+- JP Localization auto-approves on final attempt (attempt 2) with best available version to prevent pipeline stall
+- Compliance flagging is lightweight string flags only, no rewrites (Phase 12 handles full compliance)
 
 ### Pending Todos
 
@@ -93,5 +98,5 @@ Key v1.1 decisions executed (Phase 9.1):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09.1-02-PLAN.md (Strategic Insight + Creative Director prompt builders)
-Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-02-SUMMARY.md
+Stopped at: Completed 09.1-03-PLAN.md (Copywriter + JP Localization prompt builders with critique loop)
+Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-03-SUMMARY.md
