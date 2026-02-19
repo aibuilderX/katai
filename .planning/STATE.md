@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** A non-technical user submits a brief and receives a complete, download-ready campaign kit with correct Japanese copy and platform-compliant assets in under 5 minutes.
-**Current focus:** v1.1 Phase 9.1 — Agent Prompt Engineering + Photorealistic Output
+**Current focus:** v1.1 Phase 9 — Core Agent Pipeline: Generation & Execution
 
 ## Current Position
 
-Phase: 9.1 of 12 (Agent Prompt Engineering + Photorealistic Output)
-Plan: 5 of 5 in current phase (ALL plans complete — Phase 9.1 DONE)
-Status: Phase 9.1 Complete — All 5 plans executed (shared modules, 4 agent prompt builders, evaluation infrastructure)
-Last activity: 2026-02-19 — Plan 05 complete (evaluation infrastructure: test briefs, rubrics, naive baselines)
+Phase: 9 of 12 (Core Agent Pipeline: Generation & Execution)
+Plan: 1 of 5 in current phase
+Status: Plan 01 complete — Master Orchestrator workflow, per-agent progress, build-prompt endpoint
+Last activity: 2026-02-19 — Plan 01 complete (orchestrator foundation and pipeline infrastructure)
 
-Progress: [██████████░░░░░░░░░░] 52% (v1.0 complete, v1.1 Phase 8 code complete, Phase 9.1 complete)
+Progress: [██████████░░░░░░░░░░] 55% (v1.0 complete, v1.1 Phases 8+9.1 complete, Phase 9 plan 1/5)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [██████████░░░░░░░░░░] 52% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 8
-- Average duration: ~5 min
-- Total execution time: ~43 min
+- Total plans completed: 9
+- Average duration: ~6 min
+- Total execution time: ~51 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -38,6 +38,7 @@ Progress: [██████████░░░░░░░░░░] 52% (v1
 | 09.1  | 04   | 4 min    | 1     | 1     |
 | 09.1  | 03   | 5 min    | 2     | 2     |
 | 09.1  | 05   | 8 min    | 2     | 3     |
+| 09    | 01   | 8 min    | 4     | 7     |
 
 ## Accumulated Context
 
@@ -79,6 +80,13 @@ Key v1.1 decisions executed (Phase 9.1):
 - Naive Copywriter/Art Director mirror actual v1.0 code for fair baseline comparison
 - 0.5-point improvement threshold on 5-point scale for optimization success criteria
 
+Key v1.1 decisions executed (Phase 9):
+- n8n Master Orchestrator workflow created as importable JSON (n8n MCP tools not configured)
+- PipelineState stored inside progress JSONB as progress.pipelineState (avoids schema migration)
+- 9 agent steps defined (5 agents + image_generation, compositing, platform_resize, video_pipeline)
+- /api/internal/build-prompt as single source of truth for agent prompts (prevents drift from Phase 9.1 builders)
+- v1.0 flat step display preserved as fallback in progress UI
+
 ### Pending Todos
 
 - Complete 04-USER-SETUP.md: configure Runway, ElevenLabs, fal.ai, HeyGen API keys
@@ -103,5 +111,5 @@ Key v1.1 decisions executed (Phase 9.1):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09.1-05-PLAN.md (evaluation infrastructure — Phase 9.1 COMPLETE)
-Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-05-SUMMARY.md
+Stopped at: Completed 09-01-PLAN.md (Master Orchestrator foundation + pipeline infrastructure)
+Resume file: .planning/phases/09-core-agent-pipeline-generation-execution/09-01-SUMMARY.md
