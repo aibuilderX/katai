@@ -90,29 +90,35 @@
     },
     {
       "parameters": {
-        "jsCode": "// Copywriter Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-03 will replace this with Execute Sub-workflow node.\n// NOTE: Runs in parallel with Art Director via branch/merge pattern.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'copywriter',\n    labelJa: '\\u30b3\\u30d4\\u30fc\\u30e9\\u30a4\\u30c6\\u30a3\\u30f3\\u30b0\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import copywriter-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-copywriter",
-      "name": "Copywriter Agent (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Copywriter Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [1760, -120],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: copywriter-agent.json. Runs in PARALLEL with Art Director. Sub-workflow handles: build-prompt fetch (register maps, platform norms, copywriting frameworks), Anthropic API call (180s timeout), response parsing (4 variants per platform), progress callbacks, cost tracking. Partial-delivery: pipeline continues if this fails."
     },
     {
       "parameters": {
-        "jsCode": "// Art Director Agent (STUB)\n// Placeholder: passes through PipelineState unchanged.\n// Plan 09-04 will replace this with Execute Sub-workflow node.\n// NOTE: Runs in parallel with Copywriter via branch/merge pattern.\n\nconst input = $input.first().json;\n\nconst callbackPayload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'art_director',\n    labelJa: '\\u30a2\\u30fc\\u30c8\\u8a2d\\u8a08\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: { ...input, callbackPayload } }];"
+        "source": "parameter",
+        "workflowJson": "={{ /* Import art-director-agent.json workflow here after import. Use workflow ID reference in production. */ }}",
+        "options": {}
       },
       "id": "agent-art-director",
-      "name": "Art Director Agent (Stub)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Art Director Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [1760, 120],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "notes": "Execute Sub-workflow: art-director-agent.json. Runs in PARALLEL with Copywriter. Sub-workflow handles: build-prompt fetch (GENX-09 default inference, camera/lens database, Flux constraints, mode-dependent schema), Anthropic API call (180s timeout), response parsing (no negativePrompt). Partial-delivery: pipeline continues if this fails."
     },
     {
       "parameters": {
-        "jsCode": "// Merge Copywriter and Art Director parallel branches\n// Combines outputs from both branches back into single flow.\n\nconst items = $input.all();\n\n// Take the first item's pipeline data (both branches share the same base)\nconst merged = items[0].json;\n\nreturn [{ json: merged }];"
+        "jsCode": "// Merge Copywriter and Art Director parallel branches\n// Combines outputs from both branches into a single PipelineState.\n// Branch 1 (Copywriter) contributes pipelineState.copywriter\n// Branch 2 (Art Director) contributes pipelineState.artDirector\n// Both may also contribute agentErrors for partial-delivery.\n\nconst items = $input.all();\n\nif (items.length < 2) {\n  // Only one branch completed (edge case: one branch errored completely)\n  return [items[0]];\n}\n\n// Deep merge: take base from first item, overlay second item's unique fields\nconst branch1 = items[0].json;\nconst branch2 = items[1].json;\n\n// Determine which branch has copywriter and which has artDirector\nconst hasCopywriter1 = !!branch1.pipelineState?.copywriter;\nconst hasArtDirector1 = !!branch1.pipelineState?.artDirector;\nconst hasCopywriter2 = !!branch2.pipelineState?.copywriter;\nconst hasArtDirector2 = !!branch2.pipelineState?.artDirector;\n\n// Merge pipelineState: combine copywriter and artDirector from both branches\nconst mergedPipelineState = {\n  ...branch1.pipelineState,\n  // Take copywriter from whichever branch has it\n  copywriter: branch1.pipelineState?.copywriter || branch2.pipelineState?.copywriter || undefined,\n  // Take artDirector from whichever branch has it\n  artDirector: branch1.pipelineState?.artDirector || branch2.pipelineState?.artDirector || undefined,\n  // Merge agentErrors from both branches\n  agentErrors: [\n    ...(branch1.pipelineState?.agentErrors || []),\n    ...(branch2.pipelineState?.agentErrors || []).filter(\n      e2 => !(branch1.pipelineState?.agentErrors || []).some(e1 => e1.agentName === e2.agentName && e1.timestamp === e2.timestamp)\n    )\n  ]\n};\n\nconst merged = {\n  ...branch1,\n  pipelineState: mergedPipelineState\n};\n\nreturn [{ json: merged }];"
       },
       "id": "merge-parallel",
       "name": "Merge Parallel Branches",
@@ -219,19 +225,19 @@
     "Creative Director Agent": {
       "main": [
         [
-          { "node": "Copywriter Agent (Stub)", "type": "main", "index": 0 },
-          { "node": "Art Director Agent (Stub)", "type": "main", "index": 0 }
+          { "node": "Copywriter Agent", "type": "main", "index": 0 },
+          { "node": "Art Director Agent", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Copywriter Agent (Stub)": {
+    "Copywriter Agent": {
       "main": [
         [
           { "node": "Merge Parallel Branches", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Art Director Agent (Stub)": {
+    "Art Director Agent": {
       "main": [
         [
           { "node": "Merge Parallel Branches", "type": "main", "index": 0 }

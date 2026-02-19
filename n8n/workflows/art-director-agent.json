@@ -1,0 +1,184 @@
+{
+  "name": "Art Director Agent - Sub-workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Active\n// POST agentStep callback to Next.js with HMAC signature\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'art_director',\n    labelJa: '\\u30a2\\u30fc\\u30c8\\u8a2d\\u8a08\\u4e2d',\n    status: 'active',\n    startedAt: new Date().toISOString()\n  }\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\nreturn [{ json: input }];"
+      },
+      "id": "progress-active",
+      "name": "Send Progress - Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXTJS_BASE_URL }}/api/internal/build-prompt",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ (function() { const crypto = require('crypto'); const body = JSON.stringify({ agentName: 'artDirector', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { strategicInsight: $json.pipelineState.strategicInsight, creativeDirector: $json.pipelineState.creativeDirector } }); return crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(body).digest('hex'); })() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ agentName: 'artDirector', brief: $json.brief, brandProfile: $json.brandProfile, agentConfig: $json.agentConfig, mode: $json.mode, upstreamOutputs: { strategicInsight: $json.pipelineState.strategicInsight, creativeDirector: $json.pipelineState.creativeDirector } }) }}",
+        "options": {
+          "timeout": 10000,
+          "fullResponse": false
+        }
+      },
+      "id": "fetch-prompt",
+      "name": "Fetch Prompt from Build-Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "onError": "continueRegularOutput",
+      "notes": "Calls /api/internal/build-prompt with agentName 'artDirector' and upstreamOutputs (strategicInsight + creativeDirector). Endpoint handles GENX-09 (infers visual defaults from brief when brand profile is minimal), camera/lens database, photorealism keywords, quality self-critique checklist, Flux constraints, and mode-dependent tool schema selection (auto: flat imagePrompts, pro: variations wrapper). NO inline prompt content."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for Anthropic API call\n// Merges build-prompt response with pipeline state for the HTTP Request node\n\nconst promptResponse = $input.first().json;\nconst triggerData = $('Execute Workflow Trigger').first().json;\n\n// Check if build-prompt fetch failed\nif (promptResponse.error || !promptResponse.systemPrompt) {\n  throw new Error('Build-prompt fetch failed: ' + (promptResponse.error || 'No systemPrompt in response'));\n}\n\n// Build the Anthropic API request body\nconst anthropicBody = {\n  model: triggerData.agentConfig?.artDirector?.model || 'claude-opus-4-6',\n  max_tokens: promptResponse.maxTokens,\n  temperature: promptResponse.temperature,\n  system: promptResponse.systemPrompt,\n  messages: [\n    {\n      role: 'user',\n      content: promptResponse.userMessage\n    }\n  ],\n  tools: [promptResponse.toolSchema],\n  tool_choice: promptResponse.toolChoice\n};\n\nreturn [{\n  json: {\n    anthropicBody,\n    // Carry forward pipeline data for downstream nodes\n    campaignId: triggerData.campaignId,\n    brief: triggerData.brief,\n    brandProfile: triggerData.brandProfile,\n    agentConfig: triggerData.agentConfig,\n    mode: triggerData.mode,\n    pipelineState: triggerData.pipelineState\n  }\n}];"
+      },
+      "id": "prepare-anthropic",
+      "name": "Prepare Anthropic Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anthropicBody) }}",
+        "options": {
+          "timeout": 180000,
+          "fullResponse": false
+        }
+      },
+      "id": "call-anthropic",
+      "name": "Call Anthropic API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Anthropic API Key",
+          "id": "anthropic-api"
+        }
+      },
+      "notes": "Calls Anthropic API with tool-use (deliver_art_direction). Timeout 180s. CRITICAL: No negativePrompt field anywhere (Flux 1.1 Pro Ultra does not support it — enforced by Phase 9.1 tool schema via build-prompt endpoint). Uses httpHeaderAuth credential (header: x-api-key). 1 silent retry. Partial-delivery: continues pipeline on failure."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Anthropic API Response\n// Extract tool_use content block from deliver_art_direction tool call\n// Write to pipelineState.artDirector\n// Calculate cost entry from token usage\n//\n// PARTIAL-DELIVERY: If API call failed, mark agent as failed and continue pipeline\n// CRITICAL: No negativePrompt field (Flux 1.1 Pro Ultra does not support it)\n\nconst response = $input.first().json;\nconst pipelineData = $('Prepare Anthropic Request').first().json;\n\n// Check for API error (partial-delivery pattern: don't halt pipeline)\nif (response.error || response.type === 'error') {\n  const errorMsg = response.error?.message || response.message || 'Anthropic API call failed';\n  \n  const agentError = {\n    agentName: 'art_director',\n    timestamp: new Date().toISOString(),\n    message: errorMsg,\n    retryAttempted: true,\n    retrySucceeded: false,\n    isCriticalStop: false\n  };\n  \n  const updatedPipelineState = {\n    ...pipelineData.pipelineState,\n    agentErrors: [...(pipelineData.pipelineState.agentErrors || []), agentError]\n  };\n  \n  return [{\n    json: {\n      campaignId: pipelineData.campaignId,\n      brief: pipelineData.brief,\n      brandProfile: pipelineData.brandProfile,\n      agentConfig: pipelineData.agentConfig,\n      mode: pipelineData.mode,\n      pipelineState: updatedPipelineState,\n      costEntry: null,\n      summaryJa: '',\n      agentFailed: true,\n      agentError\n    }\n  }];\n}\n\n// Find the tool_use content block\nconst toolUseBlock = response.content?.find(block => block.type === 'tool_use');\n\nif (!toolUseBlock) {\n  const agentError = {\n    agentName: 'art_director',\n    timestamp: new Date().toISOString(),\n    message: 'No tool_use block found in Anthropic response. Content types: ' + (response.content || []).map(b => b.type).join(', '),\n    retryAttempted: true,\n    retrySucceeded: false,\n    isCriticalStop: false\n  };\n  \n  const updatedPipelineState = {\n    ...pipelineData.pipelineState,\n    agentErrors: [...(pipelineData.pipelineState.agentErrors || []), agentError]\n  };\n  \n  return [{\n    json: {\n      campaignId: pipelineData.campaignId,\n      brief: pipelineData.brief,\n      brandProfile: pipelineData.brandProfile,\n      agentConfig: pipelineData.agentConfig,\n      mode: pipelineData.mode,\n      pipelineState: updatedPipelineState,\n      costEntry: null,\n      summaryJa: '',\n      agentFailed: true,\n      agentError\n    }\n  }];\n}\n\nconst toolInput = toolUseBlock.input;\nconst mode = pipelineData.mode || 'pro';\n\n// Handle mode-dependent output structure\nlet imagePrompts;\n\nif (mode === 'pro' && toolInput.variations && Array.isArray(toolInput.variations)) {\n  // Pro mode: variations wrapper with variationTheme labels\n  // Flatten all variations into a single imagePrompts array\n  imagePrompts = toolInput.variations.flatMap(variation => {\n    return (variation.imagePrompts || []).map(ip => ({\n      platform: ip.platform,\n      prompt: ip.prompt,\n      style: ip.style,\n      aspectRatio: ip.aspectRatio,\n      productCategory: ip.productCategory || undefined,\n      cameraLens: ip.cameraLens || undefined,\n      lightingSetup: ip.lightingSetup || undefined,\n      compositionGuidance: ip.compositionGuidance || undefined,\n      textSafeZone: ip.textSafeZone || undefined,\n      variationTheme: variation.variationTheme || undefined\n    }));\n  });\n} else {\n  // Auto mode: flat imagePrompts array\n  imagePrompts = (toolInput.imagePrompts || []).map(ip => ({\n    platform: ip.platform,\n    prompt: ip.prompt,\n    style: ip.style,\n    aspectRatio: ip.aspectRatio,\n    productCategory: ip.productCategory || undefined,\n    cameraLens: ip.cameraLens || undefined,\n    lightingSetup: ip.lightingSetup || undefined,\n    compositionGuidance: ip.compositionGuidance || undefined,\n    textSafeZone: ip.textSafeZone || undefined\n  }));\n}\n\nconst artDirector = { imagePrompts };\n\n// Calculate cost entry\nconst usage = response.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst costYen = ((inputTokens * 15 / 1000000) + (outputTokens * 75 / 1000000)) * 150;\n\nconst costEntry = {\n  entryType: 'agent',\n  agentName: 'art_director',\n  modelUsed: response.model || 'claude-opus-4-6',\n  inputTokens,\n  outputTokens,\n  costYen: Math.round(costYen * 100) / 100,\n  success: true\n};\n\n// Update pipelineState\nconst updatedPipelineState = {\n  ...pipelineData.pipelineState,\n  artDirector\n};\n\nreturn [{\n  json: {\n    campaignId: pipelineData.campaignId,\n    brief: pipelineData.brief,\n    brandProfile: pipelineData.brandProfile,\n    agentConfig: pipelineData.agentConfig,\n    mode: pipelineData.mode,\n    pipelineState: updatedPipelineState,\n    costEntry,\n    summaryJa: toolInput.summaryJa || '',\n    agentFailed: false\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send Progress: Complete or Failed + Cost Entry\n// POST agentStep completion/failure and cost data to Next.js\n// Partial-delivery: sends 'failed' status if agent failed, pipeline continues\n\nconst crypto = require('crypto');\n\nconst input = $input.first().json;\nconst callbackUrl = $env.NEXTJS_CALLBACK_URL;\nconst secret = $env.N8N_WEBHOOK_SECRET;\n\nif (!callbackUrl || !secret) {\n  console.warn('Missing NEXTJS_CALLBACK_URL or N8N_WEBHOOK_SECRET for progress callback');\n  return [{ json: input }];\n}\n\nconst agentFailed = input.agentFailed === true;\n\nconst payload = {\n  campaignId: input.campaignId,\n  status: 'progress',\n  pipelineVersion: 'v1.1',\n  agentStep: {\n    agentName: 'art_director',\n    labelJa: '\\u30a2\\u30fc\\u30c8\\u8a2d\\u8a08\\u4e2d',\n    status: agentFailed ? 'failed' : 'complete',\n    summaryJa: agentFailed ? '\\u30a2\\u30fc\\u30c8\\u8a2d\\u8a08\\u5931\\u6557' : (input.summaryJa || ''),\n    completedAt: new Date().toISOString()\n  },\n  costEntries: input.costEntry ? [input.costEntry] : [],\n  agentError: agentFailed ? input.agentError : undefined\n};\n\nconst body = JSON.stringify(payload);\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(body)\n  .digest('hex');\n\ntry {\n  const response = await fetch(callbackUrl, {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Signature': signature\n    },\n    body\n  });\n  if (!response.ok) {\n    console.warn(`Progress callback failed: HTTP ${response.status}`);\n  }\n} catch (err) {\n  console.warn(`Progress callback error: ${err.message}`);\n}\n\n// Return updated pipeline data (without internal fields)\nreturn [{\n  json: {\n    campaignId: input.campaignId,\n    brief: input.brief,\n    brandProfile: input.brandProfile,\n    agentConfig: input.agentConfig,\n    mode: input.mode,\n    pipelineState: input.pipelineState\n  }\n}];"
+      },
+      "id": "progress-complete",
+      "name": "Send Progress - Complete/Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          { "node": "Send Progress - Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Progress - Active": {
+      "main": [
+        [
+          { "node": "Fetch Prompt from Build-Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Prompt from Build-Prompt": {
+      "main": [
+        [
+          { "node": "Prepare Anthropic Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Anthropic Request": {
+      "main": [
+        [
+          { "node": "Call Anthropic API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Anthropic API": {
+      "main": [
+        [
+          { "node": "Parse Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          { "node": "Send Progress - Complete/Failed", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "description": "Art Director Agent sub-workflow. Receives PipelineState (with strategicInsight + creativeDirector populated) from Master Orchestrator, calls /api/internal/build-prompt for prompt serialization (GENX-09 brand default inference, camera/lens database, photorealism keywords, Flux constraints, mode-dependent tool schema). Calls Anthropic API with tool-use (deliver_art_direction). Generates Flux-compatible image prompts with productCategory, cameraLens, lightingSetup, compositionGuidance — NO negativePrompt (Flux 1.1 Pro Ultra does not support it). Partial-delivery agent: pipeline continues if this fails.",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ai-content-studio",
+    "notes": "IMPORT INSTRUCTIONS: 1) Ensure Anthropic API Key credential exists (httpHeaderAuth with header 'x-api-key'), 2) Ensure NEXTJS_BASE_URL and NEXTJS_CALLBACK_URL env vars are set, 3) This workflow is called by Master Orchestrator via Execute Sub-workflow node, running in parallel with Copywriter after Creative Director."
+  }
+}
