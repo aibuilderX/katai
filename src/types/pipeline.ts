@@ -105,25 +105,49 @@ export interface PipelineState {
 /**
  * Strategic Insight agent output.
  * Quality gate: must pass schema validation with minimum required fields before pipeline continues.
+ *
+ * Phase 9.1 updates: typed awareness/framework literals, confidence scores,
+ * Japanese desire nuance, framework rationale, market context, Japanese summary.
  */
 export interface StrategicInsightOutput {
-  awarenessLevel: string          // Schwartz awareness classification
+  awarenessLevel: "unaware" | "problem_aware" | "solution_aware" | "product_aware" | "most_aware"
+  awarenessConfidence?: "high" | "medium" | "low"
   lf8Desires: string[]            // At least one LF8 desire identified
-  copywritingFramework: string    // PAS | AIDA | BAB | SB7
+  desireConfidence?: "high" | "medium" | "low"
+  japaneseDesireNuance?: string   // Cultural overlay (wa, bi_ishiki, anshin)
+  copywritingFramework: "PAS" | "AIDA" | "BAB" | "AIDMA" | "AISAS"
+  frameworkConfidence?: "high" | "medium" | "low"
+  frameworkRationale?: string     // Why this framework for this brief
   targetInsight: string           // Substantive audience insight (min 10 chars)
   creativeDirection: string       // Direction for Creative Director (min 10 chars)
   keyMessages: string[]           // Core messages to convey
   tonalGuidance: string           // Register and tone recommendation
+  marketContext?: string          // Brief competitive/market context
+  summaryJa?: string              // ~10 word Japanese summary
 }
 
+/**
+ * Creative Director agent output.
+ *
+ * Phase 9.1 updates: concept distillation, copy direction, Japanese summary.
+ */
 export interface CreativeDirectorOutput {
+  concept?: string                // One-sentence concept distillation
   visualConcept: string           // Overall visual direction
   colorGuidance: string           // Color palette recommendation
   compositionNotes: string        // Layout and composition direction
   moodKeywords: string[]          // Visual mood keywords
+  copyDirection?: string          // Tonal guidance for Copywriter
   platformAdaptations: Record<string, string>  // Per-platform visual notes
+  summaryJa?: string              // Japanese summary
 }
 
+/**
+ * Copywriter agent output.
+ *
+ * Phase 9.1 updates: rationaleNotes per variant explaining register choice,
+ * CTA style, and key word decisions.
+ */
 export interface CopywriterOutput {
   variants: {
     platform: string
@@ -133,24 +157,54 @@ export interface CopywriterOutput {
     cta: string
     hashtags: string[]
     register: string
+    rationaleNotes?: string       // Explaining register choice, CTA style, key word choices
   }[]
 }
 
+/**
+ * Art Director agent output.
+ *
+ * Phase 9.1 updates: removed negativePrompt (Flux does not support it),
+ * added productCategory, cameraLens, lightingSetup, compositionGuidance,
+ * textSafeZone for photorealistic prompt engineering.
+ */
 export interface ArtDirectorOutput {
   imagePrompts: {
     platform: string
     prompt: string
-    negativePrompt?: string
     style: string
     aspectRatio: string
+    productCategory?: string      // Inferred product category for camera/lens selection
+    cameraLens?: string           // Camera and lens specification used
+    lightingSetup?: string        // Lighting description used
+    compositionGuidance?: string  // Composition direction (rule of thirds, etc.)
+    textSafeZone?: string         // Area left clear for text compositing
   }[]
 }
 
+/**
+ * JP Localization agent output.
+ *
+ * Phase 9.1 updates: structured critique issues with platform/variant/field
+ * specificity, compliance flags for early warning, overall note, Japanese summary.
+ */
 export interface JpLocalizationOutput {
   approved: boolean
   revisionsApplied: number        // 0 = first pass approved, 1-2 = revisions needed
   localizationNotes: string       // What was adjusted and why
   qualityScore: number            // 0-100
+  issues?: {
+    platform: string
+    variant: string
+    field: string
+    category: string
+    issue: string
+    suggestion: string
+    severity: "critical" | "moderate" | "minor"
+  }[]
+  complianceFlags?: string[]      // Early warning flags for obvious compliance violations
+  overallNote?: string            // Summary feedback
+  summaryJa?: string              // ~10 word Japanese summary
 }
 
 export interface AgentError {
