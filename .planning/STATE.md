@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9.1 of 12 (Agent Prompt Engineering + Photorealistic Output)
-Plan: 5 of 5 in current phase (Plans 01, 02, 03, 04 complete — shared modules, all 4 agent prompt builders)
-Status: Phase 9.1 Executing — Plans 01-04 complete, Plan 05 (evaluation) pending
-Last activity: 2026-02-19 — Plan 03 complete (Copywriter + JP Localization prompt builders with critique loop)
+Plan: 5 of 5 in current phase (ALL plans complete — Phase 9.1 DONE)
+Status: Phase 9.1 Complete — All 5 plans executed (shared modules, 4 agent prompt builders, evaluation infrastructure)
+Last activity: 2026-02-19 — Plan 05 complete (evaluation infrastructure: test briefs, rubrics, naive baselines)
 
-Progress: [█████████░░░░░░░░░░░] 49% (v1.0 complete, v1.1 Phase 8 code complete, Phase 9.1 Plan 01 complete)
+Progress: [██████████░░░░░░░░░░] 52% (v1.0 complete, v1.1 Phase 8 code complete, Phase 9.1 complete)
 
 ## Performance Metrics
 
@@ -24,9 +24,9 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: ~5 min
-- Total execution time: ~35 min
+- Total execution time: ~43 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -37,6 +37,7 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 | 09.1  | 02   | 5 min    | 2     | 2     |
 | 09.1  | 04   | 4 min    | 1     | 1     |
 | 09.1  | 03   | 5 min    | 2     | 2     |
+| 09.1  | 05   | 8 min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -73,6 +74,10 @@ Key v1.1 decisions executed (Phase 9.1):
 - Max 5 issues per JP Localization review (LLMs struggle to address more than ~5 in a single revision pass)
 - JP Localization auto-approves on final attempt (attempt 2) with best available version to prevent pipeline stall
 - Compliance flagging is lightweight string flags only, no rewrites (Phase 12 handles full compliance)
+- Test briefs use full N8nWebhookPayload brandProfile shape for pipeline compatibility
+- Edge cases test 3 failure modes: sparse input, contradictions, emotional sensitivity
+- Naive Copywriter/Art Director mirror actual v1.0 code for fair baseline comparison
+- 0.5-point improvement threshold on 5-point scale for optimization success criteria
 
 ### Pending Todos
 
@@ -98,5 +103,5 @@ Key v1.1 decisions executed (Phase 9.1):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09.1-03-PLAN.md (Copywriter + JP Localization prompt builders with critique loop)
-Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-03-SUMMARY.md
+Stopped at: Completed 09.1-05-PLAN.md (evaluation infrastructure — Phase 9.1 COMPLETE)
+Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-05-SUMMARY.md
