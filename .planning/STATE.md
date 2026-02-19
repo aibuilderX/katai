@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 ## Current Position
 
 Phase: 9.1 of 12 (Agent Prompt Engineering + Photorealistic Output)
-Plan: 4 of 5 in current phase (Plan 04 complete — Art Director meta-prompt with self-critique)
-Status: Phase 9.1 Executing — Plans 01, 04 complete, Plans 02-03, 05 pending
-Last activity: 2026-02-19 — Plan 04 complete (Art Director meta-prompt system with category-aware camera/lens, self-critique checklist, skin realism counters, Flux Raw Mode, Japanese defaults)
+Plan: 4 of 5 in current phase (Plans 01, 02, 04 complete — shared modules, strategic/creative prompts, art director)
+Status: Phase 9.1 Executing — Plans 01, 02, 04 complete, Plans 03, 05 pending
+Last activity: 2026-02-19 — Plan 02 complete (Strategic Insight + Creative Director prompt builders with tool schemas and few-shot examples)
 
 Progress: [█████████░░░░░░░░░░░] 49% (v1.0 complete, v1.1 Phase 8 code complete, Phase 9.1 Plan 01 complete)
 
@@ -24,9 +24,9 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 - Total execution time: ~544 min
 
 **v1.1 Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: ~5 min
-- Total execution time: ~25 min
+- Total execution time: ~30 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -34,6 +34,7 @@ Progress: [█████████░░░░░░░░░░░] 49% (v1
 | 08    | 02   | 6 min    | 2     | 6     |
 | 08    | 03   | 2 min    | 1     | 1     |
 | 09.1  | 01   | 7 min    | 2     | 8     |
+| 09.1  | 02   | 5 min    | 2     | 2     |
 | 09.1  | 04   | 4 min    | 1     | 1     |
 
 ## Accumulated Context
@@ -65,6 +66,8 @@ Key v1.1 decisions executed (Phase 9.1):
 - Art Director self-critique uses chain-of-thought within single call grounded by 8-item checklist (not separate evaluation call)
 - 3 few-shot examples (cosmetics, food, fashion) for Art Director demonstrating complete tool output
 - Pro mode tool schema uses variations wrapper with variationTheme labels
+- Strategic Insight: 1 few-shot example (analytical agent); Creative Director: 2 few-shot examples (creative agent needs range)
+- Creative Director auto/pro mode uses different tool schema structures (flat object vs. array wrapper) with selector function
 
 ### Pending Todos
 
@@ -90,5 +93,5 @@ Key v1.1 decisions executed (Phase 9.1):
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 09.1-04-PLAN.md (Art Director meta-prompt with self-critique)
-Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-04-SUMMARY.md
+Stopped at: Completed 09.1-02-PLAN.md (Strategic Insight + Creative Director prompt builders)
+Resume file: .planning/phases/09.1-agent-prompt-engineering-photorealistic-output/09.1-02-SUMMARY.md
